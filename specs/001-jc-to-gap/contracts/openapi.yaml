@@ -1,0 +1,542 @@
+# API contract for feature 001-jc-to-gap
+#
+# This file is the DESIGN INTENT, written before implementation. The running
+# application generates its own document at /openapi.json from the FastAPI
+# route definitions; `backend/tests/test_api.py` asserts that the generated
+# document still contains every path and every required property named here.
+# If the two disagree, one of them is wrong and the disagreement must be
+# resolved, not tolerated.
+#
+# Conventions
+#   - All request and response bodies are JSON.
+#   - SI units are always present. Display-unit fields (_nm, _meV, _percent)
+#     are additions, never replacements.
+#   - Every failure response has the shape {"code": str, "params": object}.
+#     No response ever contains a sentence meant for a human reader
+#     (constitution IV).
+
+openapi: 3.1.0
+
+info:
+  title: Nodeless SC Gap Extractor API
+  version: 1.0.0
+  description: >
+    Extracts the London penetration depth and the single-band nodeless
+    superconducting gap from self-field transport critical current density
+    measured as a function of temperature.
+
+servers:
+  - url: /
+
+tags:
+  - name: health
+  - name: data
+  - name: analysis
+  - name: uncertainty
+  - name: export
+
+paths:
+
+  /api/health:
+    get:
+      tags: [health]
+      summary: Liveness probe used by the container health check
+      responses:
+        "200":
+          description: The service is up
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, version]
+                properties:
+                  status: { type: string, enum: [ok] }
+                  version: { type: string }
+
+  /api/examples:
+    get:
+      tags: [data]
+      summary: List the built-in example datasets (FR-028)
+      responses:
+        "200":
+          description: Available examples
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/ExampleSummary" }
+
+  /api/examples/{name}:
+    get:
+      tags: [data]
+      summary: Fetch one built-in example, ready to feed to /api/parse
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: The example
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Example" }
+        "404":
+          $ref: "#/components/responses/Error"
+
+  /api/parse:
+    post:
+      tags: [data]
+      summary: Interpret raw text as a numeric table and report how it was read (FR-002, FR-003)
+      description: >
+        Performs no physics. Separated from analysis so that a misread file is
+        caught before any computation and before any unit is chosen.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ParseRequest" }
+      responses:
+        "200":
+          description: How the text was interpreted
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ParseResponse" }
+        "422":
+          $ref: "#/components/responses/Error"
+
+  /api/lambda:
+    post:
+      tags: [analysis]
+      summary: Per-temperature inversion only, without a gap fit (FR-006, FR-007)
+      description: >
+        Useful when the data are too sparse to fit a gap, or when the user only
+        wants to inspect lambda(T) and kappa(T).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/LambdaRequest" }
+      responses:
+        "200":
+          description: The per-temperature table
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/LambdaResponse" }
+        "422":
+          $ref: "#/components/responses/Error"
+
+  /api/analyze:
+    post:
+      tags: [analysis]
+      summary: Full chain from Jc to the gap (FR-009 to FR-014, FR-019 to FR-024)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AnalyzeRequest" }
+      responses:
+        "200":
+          description: The complete analysis
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AnalyzeResponse" }
+        "422":
+          $ref: "#/components/responses/Error"
+
+  /api/uncertainty:
+    post:
+      tags: [uncertainty]
+      summary: Start Monte Carlo uncertainty propagation as a background job (FR-015 to FR-018)
+      description: >
+        Returns immediately. The computation re-runs the whole analysis for
+        every draw and can take minutes; poll /api/jobs/{job_id} for progress.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/UncertaintyRequest" }
+      responses:
+        "202":
+          description: The job was accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [job_id]
+                properties:
+                  job_id: { type: string }
+        "422":
+          $ref: "#/components/responses/Error"
+
+  /api/jobs/{job_id}:
+    get:
+      tags: [uncertainty]
+      summary: Poll a background job
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Current job state
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Job" }
+        "404":
+          $ref: "#/components/responses/Error"
+
+  /api/export/csv:
+    post:
+      tags: [export]
+      summary: Render an analysis result as a spreadsheet-readable table (FR-027)
+      description: >
+        The backend formats this rather than the frontend so that units,
+        column names, and significant figures are defined in exactly one place.
+        Plot images are exported by the frontend plotting library.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AnalyzeResponse" }
+      responses:
+        "200":
+          description: The table
+          content:
+            text/csv:
+              schema: { type: string }
+        "422":
+          $ref: "#/components/responses/Error"
+
+components:
+
+  responses:
+    Error:
+      description: A failure, reported as a stable code plus structured parameters
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorPayload" }
+
+  schemas:
+
+    ErrorPayload:
+      type: object
+      required: [code, params]
+      properties:
+        code:
+          type: string
+          description: >
+            Stable identifier from the catalogue in data-model.md. The frontend
+            maps it to a Korean sentence by exact match, so a code must never
+            change meaning once released.
+          examples: [NO_ROOT_TYPE_II, KAPPA_TOO_SMALL, FIT_DID_NOT_CONVERGE]
+        params:
+          type: object
+          additionalProperties: true
+
+    Warning:
+      type: object
+      required: [code, severity, params]
+      properties:
+        code: { type: string }
+        severity: { type: string, enum: [INFO, WARNING, ERROR] }
+        params:
+          type: object
+          additionalProperties: true
+
+    JcUnit:
+      type: string
+      enum: [A_PER_CM2, A_PER_M2]
+
+    XiUnit:
+      type: string
+      enum: [M, NM, UM]
+
+    CoherenceSource:
+      type: string
+      enum: [FROM_HC2, EXPLICIT_XI, FIXED_KAPPA]
+
+    GapModel:
+      type: string
+      enum: [CLEAN, DIRTY]
+
+    FitRoute:
+      type: string
+      enum: [TWO_STEP, DIRECT]
+
+    CorrelationMode:
+      type: string
+      enum: [SYSTEMATIC, INDEPENDENT]
+      description: >
+        Whether one perturbation is shared by every temperature point
+        (SYSTEMATIC, the default, appropriate for geometric calibration error)
+        or drawn independently at each point (INDEPENDENT, appropriate for
+        point-to-point measurement scatter). See research R8.3 - the two give
+        materially different uncertainties on Delta(0).
+
+    ExampleSummary:
+      type: object
+      required: [name, title, coherence_source, n_points]
+      properties:
+        name: { type: string }
+        title: { type: string }
+        coherence_source: { $ref: "#/components/schemas/CoherenceSource" }
+        n_points: { type: integer }
+
+    Example:
+      allOf:
+        - $ref: "#/components/schemas/ExampleSummary"
+        - type: object
+          required: [text, suggested_settings]
+          properties:
+            text:
+              type: string
+              description: Raw file contents, to be sent to /api/parse unchanged
+            suggested_settings:
+              $ref: "#/components/schemas/Settings"
+
+    ParseRequest:
+      type: object
+      required: [text]
+      properties:
+        text: { type: string }
+        comment_prefix: { type: string, default: "#" }
+
+    ParseResponse:
+      type: object
+      required: [n_rows, n_columns, header_detected, column_names, preview, values]
+      properties:
+        n_rows: { type: integer }
+        n_columns: { type: integer }
+        header_detected: { type: boolean }
+        column_names:
+          type: array
+          items: { type: string }
+          description: Detected header, or generated names when there was none
+        preview:
+          type: array
+          description: First rows as read, for the user to confirm (FR-003)
+          items:
+            type: array
+            items: { type: number }
+        values:
+          type: array
+          description: The full numeric table, row major, in the file's own units
+          items:
+            type: array
+            items: { type: number }
+
+    Dataset:
+      type: object
+      description: Numeric columns together with the units they are expressed in
+      required: [temperature_K, jc, jc_unit]
+      properties:
+        temperature_K:
+          type: array
+          items: { type: number, exclusiveMinimum: 0 }
+          minItems: 4
+        jc:
+          type: array
+          items: { type: number, exclusiveMinimum: 0 }
+          minItems: 4
+        jc_unit: { $ref: "#/components/schemas/JcUnit" }
+        hc2_T:
+          type: [array, "null"]
+          items: { type: number, exclusiveMinimum: 0 }
+          description: Required when coherence_source is FROM_HC2
+        xi:
+          type: [array, "null"]
+          items: { type: number, exclusiveMinimum: 0 }
+          description: Required when coherence_source is EXPLICIT_XI
+        xi_unit: { $ref: "#/components/schemas/XiUnit" }
+
+    Settings:
+      type: object
+      required: [coherence_source]
+      properties:
+        coherence_source: { $ref: "#/components/schemas/CoherenceSource" }
+        kappa_fixed:
+          type: [number, "null"]
+          description: Required when coherence_source is FIXED_KAPPA; must exceed exp(-0.5)
+        gap_model: { $ref: "#/components/schemas/GapModel", default: CLEAN }
+        fit_route: { $ref: "#/components/schemas/FitRoute", default: TWO_STEP }
+        tc_fixed_K:
+          type: [number, "null"]
+          description: When present, Tc is held rather than fitted (FR-013)
+        film_thickness_nm:
+          type: [number, "null"]
+          description: Diagnostics only; never enters the physics
+        root_xtol: { type: number, default: 1.0e-15 }
+        root_rtol: { type: number, default: 1.0e-12 }
+
+    UncertaintySettings:
+      type: object
+      properties:
+        jc_error_percent: { type: number, default: 0, minimum: 0 }
+        hc2_error_percent: { type: number, default: 0, minimum: 0 }
+        xi_error_percent: { type: number, default: 0, minimum: 0 }
+        kappa_error_percent: { type: number, default: 0, minimum: 0 }
+        correlation_mode:
+          allOf: [{ $ref: "#/components/schemas/CorrelationMode" }]
+          default: SYSTEMATIC
+        n_samples: { type: integer, default: 5000, minimum: 100 }
+        confidence_percent: { type: number, default: 68.27, exclusiveMinimum: 0, exclusiveMaximum: 100 }
+        seed: { type: integer, default: 12345 }
+
+    LambdaRequest:
+      type: object
+      required: [dataset, settings]
+      properties:
+        dataset: { $ref: "#/components/schemas/Dataset" }
+        settings: { $ref: "#/components/schemas/Settings" }
+
+    LambdaResponse:
+      type: object
+      required: [temperature_K, jc_A_per_m2, xi_m, xi_nm, lambda_m, lambda_nm, kappa, warnings]
+      properties:
+        temperature_K: { type: array, items: { type: number } }
+        jc_A_per_m2:   { type: array, items: { type: number } }
+        xi_m:          { type: array, items: { type: number } }
+        xi_nm:         { type: array, items: { type: number } }
+        lambda_m:      { type: array, items: { type: number } }
+        lambda_nm:     { type: array, items: { type: number } }
+        kappa:         { type: array, items: { type: number } }
+        warnings:
+          type: array
+          items: { $ref: "#/components/schemas/Warning" }
+
+    AnalyzeRequest:
+      allOf:
+        - $ref: "#/components/schemas/LambdaRequest"
+
+    FittedParameter:
+      type: object
+      required: [value, fixed]
+      properties:
+        value:  { type: number }
+        stderr: { type: [number, "null"], description: null when the covariance matrix is singular }
+        fixed:  { type: boolean }
+
+    FitResult:
+      type: object
+      required:
+        [gap_model, fit_route, converged, lambda0_m, lambda0_nm, delta0_J,
+         delta0_meV, tc_K, coupling_ratio, chi2_reduced, residuals,
+         n_points, n_free_parameters]
+      properties:
+        gap_model: { $ref: "#/components/schemas/GapModel" }
+        fit_route: { $ref: "#/components/schemas/FitRoute" }
+        converged:
+          type: boolean
+          description: When false the frontend must not present this as a result (FR-014)
+        lambda0_m:      { $ref: "#/components/schemas/FittedParameter" }
+        lambda0_nm:     { $ref: "#/components/schemas/FittedParameter" }
+        delta0_J:       { $ref: "#/components/schemas/FittedParameter" }
+        delta0_meV:     { $ref: "#/components/schemas/FittedParameter" }
+        tc_K:           { $ref: "#/components/schemas/FittedParameter" }
+        coupling_ratio: { $ref: "#/components/schemas/FittedParameter" }
+        chi2_reduced:   { type: number }
+        residuals:      { type: array, items: { type: number } }
+        n_points:            { type: integer }
+        n_free_parameters:   { type: integer }
+
+    SuperfluidCurve:
+      type: object
+      required: [temperature_K, rho_s, lambda_nm]
+      properties:
+        temperature_K: { type: array, items: { type: number } }
+        rho_s:         { type: array, items: { type: number } }
+        lambda_nm:     { type: array, items: { type: number } }
+
+    DiagnosticReport:
+      type: object
+      required:
+        [chi2_reduced, coupling_ratio, coupling_regime, bcs_ratio_reference,
+         t_min_over_tc, kappa_min, kappa_max, warnings]
+      properties:
+        chi2_reduced: { type: number }
+        chi2_clean:   { type: [number, "null"] }
+        chi2_dirty:   { type: [number, "null"] }
+        preferred_model:
+          oneOf:
+            - $ref: "#/components/schemas/GapModel"
+            - type: "null"
+          description: null when the data do not distinguish the two (FR-020)
+        coupling_ratio: { type: number }
+        coupling_regime:
+          type: string
+          enum: [BELOW_BCS, WEAK_COUPLING_BCS, MODERATELY_STRONG, STRONG_COUPLING]
+        bcs_ratio_reference:
+          type: number
+          description: 3.52775, supplied so the frontend never hard-codes a physical constant
+        t_min_over_tc: { type: number }
+        kappa_min:     { type: number }
+        kappa_max:     { type: number }
+        warnings:
+          type: array
+          items: { $ref: "#/components/schemas/Warning" }
+
+    ParameterDistribution:
+      type: object
+      required: [mean, std, ci_low, ci_high]
+      properties:
+        mean:    { type: number }
+        std:     { type: number }
+        ci_low:  { type: number }
+        ci_high: { type: number }
+
+    UncertaintyResult:
+      type: object
+      required: [lambda0_nm, delta0_meV, tc_K, coupling_ratio, n_valid, n_requested, settings]
+      properties:
+        lambda0_nm:     { $ref: "#/components/schemas/ParameterDistribution" }
+        delta0_meV:     { $ref: "#/components/schemas/ParameterDistribution" }
+        tc_K:           { $ref: "#/components/schemas/ParameterDistribution" }
+        coupling_ratio: { $ref: "#/components/schemas/ParameterDistribution" }
+        n_valid:     { type: integer }
+        n_requested: { type: integer }
+        settings:
+          allOf: [{ $ref: "#/components/schemas/UncertaintySettings" }]
+          description: Echoed verbatim including the seed, so the result is reproducible (constitution VII)
+
+    AnalyzeResponse:
+      type: object
+      required: [lambda_table, fit, curve, diagnostics, settings]
+      properties:
+        lambda_table: { $ref: "#/components/schemas/LambdaResponse" }
+        fit:          { $ref: "#/components/schemas/FitResult" }
+        curve:        { $ref: "#/components/schemas/SuperfluidCurve" }
+        diagnostics:  { $ref: "#/components/schemas/DiagnosticReport" }
+        settings:     { $ref: "#/components/schemas/Settings" }
+        uncertainty:
+          oneOf:
+            - $ref: "#/components/schemas/UncertaintyResult"
+            - type: "null"
+
+    UncertaintyRequest:
+      type: object
+      required: [dataset, settings, uncertainty]
+      properties:
+        dataset:     { $ref: "#/components/schemas/Dataset" }
+        settings:    { $ref: "#/components/schemas/Settings" }
+        uncertainty: { $ref: "#/components/schemas/UncertaintySettings" }
+
+    Job:
+      type: object
+      required: [job_id, state, progress]
+      properties:
+        job_id: { type: string }
+        state:  { type: string, enum: [PENDING, RUNNING, SUCCEEDED, FAILED] }
+        progress:
+          type: number
+          minimum: 0
+          maximum: 1
+        result:
+          oneOf:
+            - $ref: "#/components/schemas/UncertaintyResult"
+            - type: "null"
+        error:
+          oneOf:
+            - $ref: "#/components/schemas/ErrorPayload"
+            - type: "null"
