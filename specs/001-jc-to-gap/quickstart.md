@@ -58,7 +58,12 @@ in this project.
 
     docker compose up --build
 
-Then open `http://localhost:8000`.
+Then open `http://localhost:8000`. One image, one port: the same process
+serves the built page and the API.
+
+Not yet exercised on a machine with Docker installed. The build steps and the
+resulting layout were verified without a daemon -- see the Phase 7 gate note in
+`tasks.md` for exactly what that covered and what it did not.
 
 ---
 

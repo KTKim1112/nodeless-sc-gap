@@ -1,0 +1,31 @@
+# Run the whole application in a container.
+#
+#   docker compose up --build      then open http://localhost:8000
+#
+# This builds and runs the production image. It is what the acceptance
+# walkthrough of specs/001-jc-to-gap/quickstart.md is repeated against, so that
+# "it works on my machine" and "it works in the container" are checked to be the
+# same statement.
+#
+# For day-to-day development use ./dev.ps1 instead: it gives hot reload on both
+# halves, which a container image deliberately does not.
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: nodeless-sc-gap:latest
+    container_name: nodeless-sc-gap
+    ports:
+      # Bound to the loopback interface rather than every interface: nothing
+      # here is meant to be reachable from the network (QA-005, QA-006).
+      - "127.0.0.1:8000:8000"
+    restart: unless-stopped
+    # Nothing is persisted, so the filesystem can be read-only. /tmp is still
+    # needed because numpy and matplotlib-free scipy occasionally write there.
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true

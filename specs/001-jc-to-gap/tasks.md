@@ -172,14 +172,35 @@ Notes from implementing:
 
 | Id | Task | Depends on |
 | --- | --- | --- |
-| T701 | `frontend/Dockerfile` build stage producing static assets | phase 6 |
-| T702 | Root `Dockerfile`: multi-stage, Node build then Python runtime, non-root user, `HEALTHCHECK` against `/api/health` | T701 |
-| T703 | Serve the built assets from FastAPI, with SPA fallback routing | T702 |
-| T704 | `docker-compose.yml` for development | T702 |
-| T705 | Root `README.md`: what it is, how to run, how to verify, pointer to `specs/` | T704 |
+| T701 | [done] `frontend/Dockerfile` build stage producing static assets | phase 6 |
+| T702 | [done] Root `Dockerfile`: multi-stage, Node build then Python runtime, non-root user, `HEALTHCHECK` against `/api/health` | T701 |
+| T703 | [done] Serve the built assets from FastAPI, with SPA fallback routing | T702 |
+| T704 | [done] `docker-compose.yml` for development | T702 |
+| T705 | [done] Root `README.md`: what it is, how to run, how to verify, pointer to `specs/` | T704 |
 
 **Gate:** quickstart step 10 plus the whole walkthrough repeated against
-`docker compose up --build`.
+`docker compose up --build`. **Partly met, and honestly so.**
+
+Docker Desktop is not installed on the development machine and installing it
+needs administrator rights, so the image has never been built. Everything that
+can be checked without a daemon has been:
+
+- stage 1's exact command, `npx vite build --outDir ... --emptyOutDir`, runs
+  and produces the asset bundle;
+- the dependency layer installs from `pyproject.toml` alone, which is what
+  makes the stub-package trick in the Dockerfile work and keeps the dependency
+  list in one place;
+- the resulting `/app` layout -- `app/`, `examples/`, `static/` and
+  nothing else -- was reproduced with a non-editable install into a clean
+  virtual environment, and the image's `CMD` was run against it: the page is
+  served with the asset hash stage 1 produced, `/api/*` answers, `/docs`
+  answers, an unknown path falls back to the page, the `HEALTHCHECK` command
+  exits 0, and a full analysis returns the expected numbers;
+- `backend/tests/` is absent from the layout, as `.dockerignore` intends.
+
+What remains unverified is the daemon's part: that `docker build` resolves the
+base images and that `docker compose up` starts. Run
+`docker compose up --build` once Docker Desktop is installed.
 
 ---
 

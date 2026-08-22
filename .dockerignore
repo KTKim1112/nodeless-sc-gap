@@ -1,0 +1,38 @@
+# Everything the build does not need. Keeping this tight matters twice over:
+# a smaller context is faster to send to the daemon, and an unrelated file
+# changing cannot invalidate a cached layer.
+
+.git/
+.gitignore
+.dockerignore
+.obsidian/
+
+# Development environments, rebuilt inside the image.
+**/node_modules/
+**/.venv/
+**/venv/
+**/__pycache__/
+**/*.py[cod]
+**/.pytest_cache/
+**/.ruff_cache/
+**/.mypy_cache/
+**/*.egg-info/
+
+# Build output: stage 1 produces its own.
+backend/static/
+frontend/dist/
+frontend/e2e/
+frontend/playwright.config.ts
+frontend/playwright-report/
+
+# Tests do not ship. The image is checked by running the acceptance walkthrough
+# against it, not by running pytest inside it.
+backend/tests/
+
+# Documentation and the archived prototypes.
+specs/
+.specify/
+legacy/
+README.md
+dev.ps1
+docker-compose.yml
