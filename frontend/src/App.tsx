@@ -8,20 +8,25 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   api,
   ApiError,
+  type AnalyzeRequest,
   type AnalyzeResponse,
   type Dataset,
   type Example,
   type JcUnit,
   type ParseResponse,
   type Settings,
+  type UncertaintyResult,
   type XiUnit,
 } from './api/client'
 import { errorMessage, warningMessage, LABELS } from './errorMessages'
+import { Charts } from './components/Charts'
 import { ColumnPreview } from './components/ColumnPreview'
+import { DiagnosticsPanel } from './components/DiagnosticsPanel'
 import { DataInput } from './components/DataInput'
 import { FitSummary } from './components/FitSummary'
 import { LambdaTable } from './components/LambdaTable'
 import { SettingsPanel } from './components/SettingsPanel'
+import { UncertaintyPanel } from './components/UncertaintyPanel'
 
 const DEFAULT_SETTINGS: Settings = {
   coherence_source: 'FROM_HC2',
@@ -76,6 +81,14 @@ export default function App() {
 
   const [result, setResult] = useState<AnalyzeResponse | null>(null)
   const [analysisError, setAnalysisError] = useState<string | null>(null)
+  /**
+   * The exact request that produced `result`.
+   *
+   * The uncertainty run has to use the same one; rebuilding it from the current
+   * form state would silently analyse something else if a setting had been
+   * touched since.
+   */
+  const [analysedRequest, setAnalysedRequest] = useState<AnalyzeRequest | null>(null)
   const [busy, setBusy] = useState(false)
 
   // Parse whenever the text settles. Debounced, because this runs on every
@@ -107,7 +120,11 @@ export default function App() {
   }, [text])
 
   // A new dataset invalidates whatever was on screen.
-  useEffect(() => { setResult(null); setAnalysisError(null) }, [parsed, settings, jcUnit, xiUnit])
+  useEffect(() => {
+    setResult(null)
+    setAnalysedRequest(null)
+    setAnalysisError(null)
+  }, [parsed, settings, jcUnit, xiUnit])
 
   const onExampleChosen = useCallback((example: Example) => {
     setText(example.text)
@@ -135,6 +152,7 @@ export default function App() {
         settings,
       }
       setResult(await api.analyze(body))
+      setAnalysedRequest(body)
     } catch (e) {
       setResult(null)
       setAnalysisError(e instanceof ApiError ? errorMessage(e.code, e.params) : String(e))
@@ -205,6 +223,14 @@ export default function App() {
       {result && (
         <>
           <FitSummary result={result} />
+          <Charts result={result} />
+          <UncertaintyPanel
+            request={analysedRequest}
+            coherenceSource={settings.coherence_source}
+            onResult={(uncertainty: UncertaintyResult) =>
+              setResult((current) => (current ? { ...current, uncertainty } : current))}
+          />
+          <DiagnosticsPanel result={result} />
           <Assumptions result={result} />
           <LambdaTable table={result.lambda_table} />
         </>

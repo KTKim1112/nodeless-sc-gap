@@ -165,6 +165,10 @@ class FitResult:
     coupling_ratio: FittedParameter   # dimensionless
     chi2_reduced: float
     residuals: FloatArray
+    #: lambda0^2 / lambda_data^2 at each measured point, in input order. What
+    #: the data look like on a superfluid-density plot. It needs lambda0, so
+    #: only the fit can produce it.
+    rho_s_measured: FloatArray
     n_points: int
     n_free_parameters: int
     converged: bool

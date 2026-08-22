@@ -31,6 +31,25 @@ test('capture the states worth looking at', async ({ page }) => {
   // 4. Just the results, at readable size.
   await page.locator('section.card', { hasText: '피팅 결과' })
     .screenshot({ path: `${SHOTS}/04-fit-summary.png` })
+
+  // 4b. Each plot. These are the only way to see whether the model actually
+  // follows the data, which no summary statistic can tell you.
+  // Scoped by the heading, not by any text: '그래프' also occurs in the
+  // diagnostics panel's prose.
+  const charts = page.locator('section.card').filter({
+    has: page.getByRole('heading', { name: '그래프', exact: true }),
+  })
+  for (const [tab, name] of [
+    ['초전도 밀도 ρs(T)', 'rho-s'],
+    ['침투깊이 λ(T)', 'lambda'],
+    ['잔차', 'residuals'],
+  ] as const) {
+    await charts.getByRole('tab', { name: tab }).click()
+    await expect(charts.locator('.js-plotly-plot')).toBeVisible()
+    await page.waitForTimeout(700)      // let Plotly finish drawing
+    await charts.screenshot({ path: `${SHOTS}/04b-chart-${name}.png` })
+  }
+  await charts.getByRole('tab', { name: '초전도 밀도 ρs(T)' }).click()
   await page.locator('section.card', { hasText: '가정과 주의사항' })
     .screenshot({ path: `${SHOTS}/05-assumptions.png` })
 

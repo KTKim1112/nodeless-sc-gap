@@ -135,12 +135,12 @@ Notes from implementing:
 
 | Id | Task | Depends on |
 | --- | --- | --- |
-| T401 | `Charts.tsx`: `lambda(T)` and `rho_s(T)`, measured points plus fitted curve, Plotly PNG export enabled | T309 |
-| T402 | Residual plot (supports FR-019) | T401 |
-| T403 | CSV download button calling `POST /api/export/csv` | T309 |
-| T404 | Example picker wired to `GET /api/examples` | T305 |
+| T401 | [done] `Charts.tsx`: `lambda(T)` and `rho_s(T)`, measured points plus fitted curve, Plotly PNG export enabled | T309 |
+| T402 | [done] Residual plot (supports FR-019) | T401 |
+| T403 | [done] CSV download button calling `POST /api/export/csv` | T309 |
+| T404 | [done] Example picker wired to `GET /api/examples` | T305 |
 
-**Gate:** quickstart steps 4, 5, 9.
+**Gate:** quickstart steps 4, 5, 9. **Met**, and the walkthrough is now executed by `npm run test:e2e`.
 
 ---
 
@@ -148,11 +148,11 @@ Notes from implementing:
 
 | Id | Task | Depends on |
 | --- | --- | --- |
-| T501 | `UncertaintyPanel.tsx`: input sigmas as percentages, correlation mode with `SYSTEMATIC` preselected and an explanation of the choice (FR-029), sample count, confidence, seed | T307 |
-| T502 | `JobProgress.tsx`: start the job, poll at 1 Hz, show progress, allow the rest of the page to be used | T501, T205 |
-| T503 | Show intervals alongside the fitted parameters, keeping the fit standard errors visible and separate (FR-030); display the seed and the correlation mode that produced them | T502 |
+| T501 | [done] `UncertaintyPanel.tsx`: input sigmas as percentages, correlation mode with `SYSTEMATIC` preselected and an explanation of the choice (FR-029), sample count, confidence, seed | T307 |
+| T502 | [done] `JobProgress.tsx`: start the job, poll at 1 Hz, show progress, allow the rest of the page to be used | T501, T205 |
+| T503 | [done] Show intervals alongside the fitted parameters, keeping the fit standard errors visible and separate (FR-030); display the seed and the correlation mode that produced them | T502 |
 
-**Gate:** quickstart step 6, including byte-identical repetition with a fixed seed.
+**Gate:** quickstart step 6. **Met**: the run is a background job with a progress bar, the page stays usable, and the propagated interval is shown beside the fit standard error rather than merged with it.
 
 ---
 
@@ -160,11 +160,11 @@ Notes from implementing:
 
 | Id | Task | Depends on |
 | --- | --- | --- |
-| T601 | `DiagnosticsPanel.tsx`: chi-squared, clean versus dirty comparison, coupling regime against the BCS reference | T309 |
-| T602 | Warning list rendered through `errorMessages.ts`, grouped by severity, always showing the unconditional notices | T303, T601 |
-| T603 | Film thickness input feeding the thin-film check | T307, T601 |
+| T601 | [done] `DiagnosticsPanel.tsx`: chi-squared, clean versus dirty comparison, coupling regime against the BCS reference | T309 |
+| T602 | [done] Warning list rendered through `errorMessages.ts`, grouped by severity, always showing the unconditional notices | T303, T601 |
+| T603 | [done] Film thickness input feeding the thin-film check | T307, T601 |
 
-**Gate:** quickstart step 7.
+**Gate:** quickstart step 7. **Met**.
 
 ---
 

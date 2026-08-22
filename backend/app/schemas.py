@@ -266,6 +266,9 @@ class FitResultOut(Model):
     coupling_ratio: FittedParameter
     chi2_reduced: float
     residuals: list[float]
+    rho_s_measured: list[float] = Field(
+        description="lambda0^2 / lambda^2 at each measured point, for plotting"
+    )
     n_points: int
     n_free_parameters: int
     n_function_evaluations: int
@@ -286,6 +289,7 @@ class FitResultOut(Model):
             coupling_ratio=FittedParameter.of(fit.coupling_ratio),
             chi2_reduced=fit.chi2_reduced,
             residuals=_list(fit.residuals),
+            rho_s_measured=_list(fit.rho_s_measured),
             n_points=fit.n_points,
             n_free_parameters=fit.n_free_parameters,
             n_function_evaluations=fit.n_function_evaluations,

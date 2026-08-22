@@ -70,6 +70,10 @@ class _Problem:
     jc_data: FloatArray | None = None
     xi: FloatArray | None = None
     kappa_fixed: float | None = None
+    #: The measured lambda(T), for reporting rho_s_measured. Route A fits it, so
+    #: this is the same array there. Route B does not, and gets it from the
+    #: caller, which has already built the table.
+    lambda_reference: FloatArray | None = None
 
     @property
     def n_free(self) -> int:
@@ -204,6 +208,15 @@ def _assemble(
     dof = max(n_points - n_free, 1)
     chi2_reduced = float(2.0 * result.cost / dof)
 
+    reference = problem.lambda_reference
+    if reference is None:
+        reference = problem.lambda_data
+    rho_s_measured = (
+        np.asarray((lambda0 / reference) ** 2, dtype=float)
+        if reference is not None
+        else np.empty(0, dtype=float)
+    )
+
     return FitResult(
         gap_model=problem.gap_model,
         fit_route=route,
@@ -217,6 +230,7 @@ def _assemble(
         coupling_ratio=FittedParameter(value=float(ratio), stderr=se_ratio),
         chi2_reduced=chi2_reduced,
         residuals=np.asarray(result.fun, dtype=float),
+        rho_s_measured=rho_s_measured,
         n_points=n_points,
         n_free_parameters=n_free,
         converged=bool(result.success),
@@ -277,6 +291,7 @@ def fit_route_a(
         gap_model=gap_model or settings.gap_model,
         tc_fixed_K=settings.tc_fixed_K,
         lambda_data=table.lambda_,
+        lambda_reference=table.lambda_,
     )
     return _solve(problem, FitRoute.TWO_STEP)
 
@@ -285,6 +300,7 @@ def fit_route_b(
     dataset: MeasurementDataset,
     settings: AnalysisSettings,
     gap_model: GapModel | None = None,
+    lambda_reference: FloatArray | None = None,
 ) -> FitResult:
     """Fit the measured Jc(T) directly, without inverting equation (1)."""
     from .lambda_solver import resolve_xi
@@ -301,6 +317,7 @@ def fit_route_b(
         jc_data=np.asarray(dataset.jc, dtype=float),
         xi=resolve_xi(dataset, settings),
         kappa_fixed=fixed_kappa,
+        lambda_reference=lambda_reference,
     )
     return _solve(problem, FitRoute.DIRECT)
 
@@ -314,4 +331,4 @@ def fit(
     """Dispatch on the configured route."""
     if settings.fit_route is FitRoute.TWO_STEP:
         return fit_route_a(table, settings, gap_model)
-    return fit_route_b(dataset, settings, gap_model)
+    return fit_route_b(dataset, settings, gap_model, lambda_reference=table.lambda_)

@@ -21,9 +21,14 @@ async function analyse(page: Page) {
   await expect(heading(page, '피팅 결과')).toBeVisible()
 }
 
-/** The value cell of one row of the fit summary. */
+/** The value cell of one row of the fit summary.
+ *
+ * Scoped to the card, because the diagnostics panel below it uses the same
+ * table markup and would otherwise be matched too.
+ */
 function fitValue(page: Page, quantity: string) {
-  return page.locator('table.results tr', { has: page.locator(`th:text-is("${quantity}")`) })
+  return page.locator('section.card', { hasText: '피팅 결과' })
+    .locator('table.results tr', { has: page.locator(`th:text-is("${quantity}")`) })
     .locator('td.value').first()
 }
 
@@ -61,7 +66,7 @@ test('recovers the parameters the example was generated from', async ({ page }) 
   expect(await fitNumber(page, 'Tc')).toBeCloseTo(9.2, 1)
   expect(await fitNumber(page, '2Δ(0)/k_BTc')).toBeCloseTo(3.53, 1)
 
-  await expect(page.getByText('BCS 약결합', { exact: true })).toBeVisible()
+  await expect(page.locator('span.badge.regime-WEAK_COUPLING_BCS')).toBeVisible()
   // FR-012: every fitted parameter carries a standard uncertainty.
   await expect(page.locator('section.card', { hasText: '피팅 결과' })
     .locator('table.results').first()).toContainText('±')
@@ -213,6 +218,116 @@ test('the results can be downloaded as a table with units in the headers', async
   expect(csv).toContain('T_K,Jc_A_per_m2,xi_nm,lambda_nm,kappa')
   expect(csv).toContain('SELF_FIELD_TRANSPORT_REQUIRED')
   expect(csv).toContain('lambda(0) [nm]')
+})
+
+// --- FR-026, FR-019: the plots ----------------------------------------------
+
+test('all three plots draw', async ({ page }) => {
+  await loadExample(page, 'nbti_like')
+  await analyse(page)
+  const charts = page.locator('section.card').filter({
+    has: page.getByRole('heading', { name: '그래프', exact: true }),
+  })
+
+  for (const tab of ['초전도 밀도 ρs(T)', '침투깊이 λ(T)', '잔차']) {
+    await charts.getByRole('tab', { name: tab }).click()
+    await expect(charts.locator('.js-plotly-plot')).toBeVisible()
+    // Two traces on the first two tabs (data and model), one on residuals.
+    const traces = charts.locator('.js-plotly-plot .scatterlayer .trace')
+    await expect(traces.first()).toBeVisible()
+  }
+})
+
+test('the plot offers a PNG download', async ({ page }) => {
+  await loadExample(page, 'nbti_like')
+  await analyse(page)
+  const charts = page.locator('section.card').filter({
+    has: page.getByRole('heading', { name: '그래프', exact: true }),
+  })
+  await expect(charts.locator('.modebar-btn').first()).toBeAttached()
+  expect(await charts.locator('.modebar-btn').count()).toBeGreaterThan(2)
+})
+
+// --- FR-019 to FR-021: the diagnostics panel --------------------------------
+
+test('the diagnostics panel reports the basis for its judgements', async ({ page }) => {
+  await loadExample(page, 'nbti_like')
+  await analyse(page)
+  const panel = page.locator('section.card', { hasText: '피팅 품질 진단' })
+
+  await expect(panel).toContainText('χ²_red')
+  await expect(panel).toContainText('결합 세기')
+  await expect(panel).toContainText('BCS 3.52775')     // FR-021
+  await expect(panel).toContainText('저온 도달도')
+  await expect(panel).toContainText('κ 범위')
+  await expect(panel).toContainText('ΔAIC')            // FR-020
+  await expect(panel).toContainText('선호')
+})
+
+test('the diagnostics panel declines to choose when it should', async ({ page }) => {
+  await loadExample(page, 'nb3sn_like')
+  await analyse(page)
+  await expect(page.locator('section.card', { hasText: '피팅 품질 진단' }))
+    .toContainText('판정하지 않습니다')
+})
+
+// --- FR-015 to FR-018, FR-029, FR-030: uncertainty propagation --------------
+
+test('uncertainty propagation runs in the background and reports intervals', async ({ page }) => {
+  test.setTimeout(180_000)
+  await loadExample(page, 'nb3sn_like')
+  await analyse(page)
+
+  const panel = page.locator('section.card', { hasText: '측정 오차 전파' })
+  await panel.getByLabel('Jc 오차 [%]').fill('5')
+  await panel.getByLabel('오차의 성격').selectOption('INDEPENDENT')
+  await panel.getByLabel('표본 수').fill('200')
+  await panel.getByRole('button', { name: '오차 전파 실행' }).click()
+
+  // FR-018: it says it is running, and the rest of the page keeps working.
+  await expect(panel.getByRole('progressbar')).toBeVisible()
+  await expect(page.getByRole('heading', { name: '그래프' })).toBeVisible()
+
+  // FR-030: the propagated interval appears next to the fit standard error,
+  // in its own column, rather than replacing it.
+  const summary = page.locator('section.card', { hasText: '피팅 결과' })
+  await expect(summary).toContainText('측정 오차 전파', { timeout: 150_000 })
+  await expect(summary).toContainText('seed')
+})
+
+test('a systematic Jc error moves lambda but not the gap', async ({ page }) => {
+  // Research R8.3, visible to the user: under a fixed kappa the superfluid
+  // density is a ratio in which a common scale factor cancels, so a geometry
+  // calibration error cannot move Delta(0) at all.
+  test.setTimeout(180_000)
+  await loadExample(page, 'nb3sn_like')
+  await analyse(page)
+
+  const panel = page.locator('section.card', { hasText: '측정 오차 전파' })
+  await panel.getByLabel('Jc 오차 [%]').fill('5')
+  await panel.getByLabel('오차의 성격').selectOption('SYSTEMATIC')
+  await panel.getByLabel('표본 수').fill('200')
+  await panel.getByRole('button', { name: '오차 전파 실행' }).click()
+
+  const summary = page.locator('section.card', { hasText: '피팅 결과' })
+  await expect(summary).toContainText('측정 오차 전파', { timeout: 150_000 })
+
+  const mcCell = (quantity: string) =>
+    summary.locator('tr', { has: page.locator(`th:text-is("${quantity}")`) })
+      .locator('td.value').nth(1)
+
+  const read = async (quantity: string) => {
+    const [mean, sd] = (await mcCell(quantity).innerText()).split('±')
+    return Math.abs(Number(sd) / Number(mean))
+  }
+  // lambda(0) moves by about a third of the stated Jc error; the gap does not
+  // move at all. Not exactly zero, because the optimiser stops at a tolerance
+  // rather than at the exact minimum, so the invariance shows up as a relative
+  // spread of order 1e-8 -- six orders below the lambda(0) one.
+  const lambdaSpread = await read('λ(0)')
+  const deltaSpread = await read('Δ(0)')
+  expect(lambdaSpread).toBeGreaterThan(1e-2)
+  expect(deltaSpread).toBeLessThan(1e-6)
 })
 
 // --- constitution VIII: the page is Korean, the payloads are not -------------

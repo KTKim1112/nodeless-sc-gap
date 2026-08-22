@@ -13,14 +13,14 @@
     "shots": "playwright test screenshots.spec.ts"
   },
   "dependencies": {
-    "plotly.js-dist-min": "^3.1.1",
+    "plotly.js-basic-dist-min": "^3.7.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
   },
   "devDependencies": {
     "@playwright/test": "^1.62.1",
     "@types/node": "^24.13.3",
-    "@types/plotly.js-dist-min": "^2.3.4",
+    "@types/plotly.js": "^3.0.13",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.4",

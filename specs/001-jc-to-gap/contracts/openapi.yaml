@@ -440,6 +440,13 @@ components:
         coupling_ratio: { $ref: "#/components/schemas/FittedParameter" }
         chi2_reduced:   { type: number }
         residuals:      { type: array, items: { type: number } }
+        rho_s_measured:
+          type: array
+          items: { type: number }
+          description: >
+            lambda0^2 / lambda^2 at each measured point, in input order. What
+            the data look like on a superfluid-density plot. Computed here
+            rather than by the client because it needs the fitted lambda0.
         n_points:            { type: integer }
         n_free_parameters:   { type: integer }
 

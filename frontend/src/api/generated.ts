@@ -356,6 +356,11 @@ export interface components {
             chi2_reduced: number;
             /** Residuals */
             residuals: number[];
+            /**
+             * Rho S Measured
+             * @description lambda0^2 / lambda^2 at each measured point, for plotting
+             */
+            rho_s_measured: number[];
             /** N Points */
             n_points: number;
             /** N Free Parameters */

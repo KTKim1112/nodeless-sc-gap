@@ -234,6 +234,66 @@ table.results .value { font-family: var(--code); font-variant-numeric: tabular-n
 table.results .note-col, table.results .note { min-width: 18ch; max-width: 34ch; }
 table.results.compact { min-width: 0; }
 
+.subhead {
+  margin: 1.35rem 0 0.6rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+/* --- progress --- */
+
+.progress {
+  position: relative;
+  flex: 1 1 12rem;
+  max-width: 22rem;
+  height: 1.5rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 7px;
+  background: var(--bg);
+  overflow: hidden;
+}
+.progress .bar {
+  height: 100%;
+  background: var(--accent-weak);
+  border-right: 1px solid var(--accent);
+  transition: width 0.3s ease;
+}
+.progress .label {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
+/* --- tabs and plots --- */
+
+.tabs { display: flex; gap: 0.3rem; flex-wrap: wrap; margin-bottom: 0.4rem; }
+.tab {
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid transparent;
+  border-radius: 7px;
+  padding: 0.3rem 0.75rem;
+  font-size: 0.87rem;
+}
+.tab:hover:not(.active) { background: var(--bg); color: var(--text); }
+.tab.active {
+  background: var(--accent-weak);
+  color: var(--accent);
+  border-color: var(--accent);
+  font-weight: 600;
+}
+
+.plot { width: 100%; min-height: 320px; }
+/* Plotly draws its toolbar on hover; keeping it visible means the PNG button
+ * is discoverable rather than something you have to know is there. */
+.plot .modebar { opacity: 0.55; }
+.plot:hover .modebar { opacity: 1; }
+
 /* --- badges --- */
 
 .badges { display: flex; flex-wrap: wrap; gap: 0.45rem; margin: 0.9rem 0 0.6rem; }

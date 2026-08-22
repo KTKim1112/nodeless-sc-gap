@@ -147,6 +147,7 @@ the equations it implements.
 | `coupling_ratio` | `FittedParameter` | — | `2*delta0/(KB*tc)`, derived |
 | `chi2_reduced` | `float` | — | |
 | `residuals` | `float[]` | — | one per data point, in input order |
+| `rho_s_measured` | `float[]` | — | `lambda0^2 / lambda_data^2` at each measured point, in input order |
 | `n_points` | `int` | — | |
 | `n_free_parameters` | `int` | — | |
 | `converged` | `bool` | — | false means the result must not be displayed as a fit (FR-014) |
@@ -157,6 +158,12 @@ for `TWO_STEP`, of `Jc` for `DIRECT` (research R6). They are therefore
 fractional deviations to first order, and comparable in magnitude between the
 two routes, though not the same quantity. The route field is what tells a
 reader which it is.
+
+`rho_s_measured` is what the measured points look like on a superfluid-density
+plot, and it lives here rather than being computed by whoever draws the plot
+because it needs `lambda0`, which only the fit knows. Keeping the definition
+`rho_s = lambda0^2 / lambda^2` in one place is the same reason every other
+formula is in the core.
 
 ---
 
