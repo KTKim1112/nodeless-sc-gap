@@ -81,17 +81,25 @@ Added beyond the original list, each because a measurement showed it was needed:
 
 | Id | Task | Depends on |
 | --- | --- | --- |
-| T201 | `app/schemas.py`: Pydantic models for every schema in `contracts/openapi.yaml`, plus `to_domain` and `from_domain` conversion including display units | T103, T104 |
-| T202 | `app/main.py`: application factory, `CoreError` exception handler producing `{"code","params"}` and mapping each code to an HTTP status (the mapping lives here, never in `core/`), `/api/health` | T105, T201 |
-| T203 | `app/api/routes.py`: `POST /api/parse`, `POST /api/lambda`, `POST /api/analyze` | T112, T201 |
-| T204 | `app/jobs.py`: in-memory job store, thread runner, progress updates | T111 |
-| T205 | `app/api/routes.py`: `POST /api/uncertainty`, `GET /api/jobs/{job_id}` | T204 |
-| T206 | `app/api/routes.py`: `GET /api/examples`, `GET /api/examples/{name}` | T122 |
-| T207 | `app/api/routes.py`: `POST /api/export/csv`, column names carrying units | T203 |
-| T208 | `tests/test_api.py`: happy path per endpoint; error codes returned with the right HTTP status; **no non-ASCII in any response body**; the generated `/openapi.json` contains every path and required property in the contract | T203-T207 |
+| T201 | [done] `app/schemas.py`: Pydantic models for every schema in `contracts/openapi.yaml`, plus `to_domain` and `from_domain` conversion including display units | T103, T104 |
+| T202 | [done] `app/main.py`: application factory, `CoreError` exception handler producing `{"code","params"}` and mapping each code to an HTTP status (the mapping lives here, never in `core/`), `/api/health` | T105, T201 |
+| T203 | [done] `app/api/routes.py`: `POST /api/parse`, `POST /api/lambda`, `POST /api/analyze` | T112, T201 |
+| T204 | [done] `app/jobs.py`: in-memory job store, thread runner, progress updates | T111 |
+| T205 | [done] `app/api/routes.py`: `POST /api/uncertainty`, `GET /api/jobs/{job_id}` | T204 |
+| T206 | [done] `app/api/routes.py`: `GET /api/examples`, `GET /api/examples/{name}` | T122 |
+| T207 | [done] `app/api/routes.py`: `POST /api/export/csv`, column names carrying units | T203 |
+| T208 | [done] `tests/test_api.py`: happy path per endpoint; error codes returned with the right HTTP status; **no non-ASCII in any response body**; the generated `/openapi.json` contains every path and required property in the contract | T203-T207 |
 
 **Gate:** every endpoint exercised through `http://localhost:8000/docs`, and
-`test_api.py` green.
+`test_api.py` green. **Met**: 166 tests pass, nine endpoints live.
+
+Added while implementing:
+
+| Id | Task | Why |
+| --- | --- | --- |
+| T209 | `app/examples_store.py` | reading the example files is I/O, which `core/` is forbidden to do and routes should not be doing either |
+| T210 | `tests/test_api.py` checks the generated `/openapi.json` against `contracts/openapi.yaml` | the contract was written before the code, so drift between them has to be a build failure rather than something noticed later |
+| T211 | `tests/test_api.py` asserts no response body contains non-ASCII | constitution IV and VIII: Korean leaking into the backend is invisible by eye and breaks the separation that keeps errors testable |
 
 ---
 

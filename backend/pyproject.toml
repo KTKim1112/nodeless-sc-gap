@@ -19,6 +19,9 @@ dependencies = [
 dev = [
     "pytest>=8.0",
     "httpx>=0.27",          # FastAPI's TestClient needs this
+    # Only so that tests/test_api.py can read the hand-written API contract and
+    # check the running app against it. Not used at runtime.
+    "pyyaml>=6.0",
     # Only so that tests/test_legacy_agreement.py can run the archived
     # prototypes as a numerical cross-check. The application itself does not
     # use pandas and must not acquire the dependency.
