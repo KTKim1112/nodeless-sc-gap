@@ -54,6 +54,23 @@ converge to the unique solution on that branch.
 Below that the model gives a negative `Jc` and is meaningless. Note this is
 close to, but not the same as, the type-I/type-II boundary `1/sqrt(2) = 0.7071`.
 
+**What the branch choice costs.** Because the solver searches only `lambda > xi`,
+the largest `Jc` it can account for is the limit as `lambda -> xi`, namely
+
+    Jc_max(xi) = PHI0 / (4 pi MU0 xi^3) * 0.5                            ... (1a)
+
+and that limit *is* the case `kappa = 1`. Inverting equation (1) therefore
+returns solutions with `kappa > 1` and nothing else. A measured `Jc` at or above
+(1a) is not a solver failure: it is the data saying `kappa <= 1` for this `xi`,
+which the strong type-II treatment does not cover. `NO_ROOT_TYPE_II` carries
+`jc_max` so the frontend can say so.
+
+The fixed-`kappa` mode is not restricted this way, because equation (6) is
+explicit and never searches a branch. It accepts any `kappa > exp(-0.5)`,
+including the `0.6065 < kappa < 1` region that the root finder cannot reach.
+The asymmetry is deliberate: under a fixed `kappa` the user has asserted the
+value, whereas when inverting for it the model must pick a branch.
+
 ---
 
 ## R2. Coherence length from the upper critical field
@@ -144,18 +161,43 @@ to test.
 
 ### Numerical treatment
 
-`sech^2(x) ~ 4 exp(-2x)` for large `x`. Truncating the integrand where
-`sqrt(u^2 + d^2) = 30` leaves a remainder below `4 exp(-60) ~ 4e-27`, which is
-negligible against double precision. Therefore:
+**Truncation.** `sech^2(x) ~ 4 exp(-2x)` for large `x`, and `sech^2(30) = 3.5e-26`.
+Integrating `u` over the fixed interval `[0, 30]` therefore discards a tail
+bounded by `30 * sech^2(30) ~ 1e-24`, which is not representable beside a result
+of order 1. The upper limit is a constant, not a function of `d`: the integrand
+argument is `sqrt(u^2 + d^2) >= u`, so a fixed limit on `u` is if anything
+*more* conservative than solving `sqrt(u^2 + d^2) = 30` for `u`. Measured, the
+two agree to `1.6e-19` at `d = 5` and better elsewhere, so the fixed limit is
+used because it is simpler.
 
-    if d >= 30:  integral = 0  (return rho_s = 1 exactly)
-    else:        integrate u from 0 to sqrt(30^2 - d^2)
+**Short circuit.** For `d >= 30` the integrand is below `sech^2(30)` everywhere,
+so the integral is below `1e-24` and `rho_s = 1` is returned exactly, without
+quadrature. `T = 0` is handled the same way without evaluating `d` at all. This
+makes the `T -> 0` limit exact rather than asymptotic.
 
-This removes the infinite upper limit, removes all underflow, and makes the
-`T -> 0` limit exact rather than asymptotic. Adaptive quadrature is used on the
-finite interval.
+**Quadrature rule.** Fixed-node Gauss-Legendre on the four panels
+`[0, 2], [2, 6], [6, 14], [14, 30]` with 20 nodes each, 80 nodes in total.
+The nodes and weights are computed once and reused, and the rule is evaluated
+for every temperature point simultaneously as one array operation.
 
-`T = 0` exactly is handled as `rho_s = 1` without evaluating `d`.
+Adaptive quadrature was rejected on measurement, not on principle. Against
+`scipy.integrate.quad` at `epsabs = 1e-15` the panelled rule agrees to
+`4.4e-16` — the floating-point floor — while being 250 times faster for a
+20-point dataset. Projected over one Monte Carlo run of 5000 draws, that is the
+difference between 3 minutes and 8 hours, which is the difference between the
+feature existing and not.
+
+Panelling matters more than node count. A single panel over `[0, 30]` needs
+about 350 nodes to reach the same accuracy, because Gauss-Legendre converges at
+a rate set by the interval length relative to the distance to the nearest
+singularity of the integrand, and `sech^2` has poles at `u = i pi/2`. Measured,
+a single panel with 400 nodes is in fact *worse* than one with 100 (`3.6e-13`
+against `2.7e-15`) as rounding error accumulates across the sum. Four graded
+panels reach the floor with 80.
+
+The rule is fixed rather than adaptive, so it is also deterministic: the same
+input gives bit-identical output on every run, which constitution VII requires
+of the Monte Carlo built on top of it.
 
 ---
 
@@ -175,7 +217,7 @@ Limits: `T -> 0` gives `Delta(T)/Delta(0) = 1` and `tanh(inf) = 1`, so
 For the same gap, the dirty limit lies above the clean limit across the
 temperature range where the two differ measurably. With `Delta0 = 1.5 meV` and
 `Tc = 10 K` the separation peaks at `rho_dirty - rho_clean = 0.097` near
-`T/Tc = 0.7`, and exceeds `0.03` over the whole range `0.4 < T/Tc < 0.95`.
+`T/Tc = 0.7`, and stays above `0.028` over the whole range `0.4 <= T/Tc <= 0.95`.
 That separation is what makes the two distinguishable in a fit and is the basis
 of the comparison required by FR-020.
 
@@ -203,10 +245,45 @@ Modelled penetration depth:
 ### Route A — two-step
 
 Input: `lambda_data(T_i)` obtained by solving (1) at each temperature.
-Residual, dimensionless and naturally weighted towards low temperature where the
-superfluid density is largest:
+Residual, taken in the logarithm of the penetration depth:
 
-    r_i = lambda0^2 / lambda_data(T_i)^2  -  rho_s(T_i; Delta0, Tc)
+    r_i = ln( lambda_model(T_i; lambda0, Delta0, Tc) ) - ln( lambda_data(T_i) )   ... (7a)
+
+**Why the logarithm rather than the superfluid density.** The obvious residual
+is the difference of normalised superfluid densities,
+`lambda0^2/lambda_data^2 - rho_s`. It recovers the parameters correctly, and it
+was the first choice here. It was replaced on measurement.
+
+The covariance formula below assumes the residuals are homoscedastic, that is,
+that their scatter does not depend on which point they belong to. Under a
+multiplicative uncertainty in `Jc` the *fractional* error in `lambda` is the
+same at every temperature, so `ln(lambda)` residuals have constant scatter and
+the assumption holds. A superfluid-density residual instead scales with
+`rho_s`, which runs from 1 at low temperature to nearly 0 at `Tc`; the scatter
+therefore collapses towards `Tc`, exactly where `Tc` itself is determined, and
+the assumption fails.
+
+Measured by parametric bootstrap: perturb `Jc`, refit 400 times, and compare the
+actual spread of each parameter against the standard error the fit reported. A
+ratio of 1 means the reported error is honest.
+
+| dataset | residual | `lambda0` | `Delta0` | `Tc` |
+| --- | --- | --- | --- | --- |
+| 20 points, 5 % on `Jc` | superfluid density | 1.22 | 0.90 | **0.57** |
+| 20 points, 5 % on `Jc` | `ln lambda` | 1.01 | 1.02 | 1.07 |
+| 40 points, 5 % on `Jc` | superfluid density | 1.28 | 0.94 | **0.48** |
+| 40 points, 5 % on `Jc` | `ln lambda` | 1.04 | 1.03 | 0.96 |
+| 15 points from 0.3 Tc | superfluid density | 1.30 | 1.08 | **0.73** |
+| 15 points from 0.3 Tc | `ln lambda` | 0.99 | 0.99 | 1.05 |
+
+The superfluid-density residual overstates the uncertainty on `Tc` by a factor
+of two. The logarithmic residual is honest to within 7 % everywhere tested, and
+is also the more efficient estimator: the actual spread of `Delta0` is 13 %
+smaller and the bias about five times smaller, because it stops discarding the
+information carried by the points near `Tc`.
+
+It also makes the two routes statistically consistent, since route B already
+works in `ln(Jc)` for the same reason.
 
 ### Route B — direct global fit
 
@@ -587,9 +664,87 @@ Values are stated here so they are reviewable rather than buried in code.
 | `0.3 < t_min <= 0.5` | warning: `Delta(0)` is weakly constrained |
 | `t_min > 0.5` | warning, stronger: `Delta(0)` is essentially an extrapolation |
 
-**Clean versus dirty.** Fit both, compare reduced chi-squared. If the better
-model's value is more than 20 % below the other's, declare it the better
-description; otherwise report that the data do not distinguish them.
+**Clean versus dirty.** Fit both and compare by the Akaike information
+criterion. The two models have the same number of free parameters, so with
+Gaussian residuals over `m` points the difference reduces to
+
+    Delta_AIC = m * ln( chi2_worse / chi2_better )                       ... (16)
+
+A preferred model is declared when `Delta_AIC >= 10`, the conventional point at
+which the weaker model has essentially no support. The reportable form is the
+Akaike weight
+
+    w = 1 / ( 1 + exp( -Delta_AIC / 2 ) )                                ... (17)
+
+which is the relative support for the better model, and is what FR-020 means by
+"the quantitative basis".
+
+*Why not simply require the better chi-squared to be, say, 20 % below the
+other.* That was the first rule here and it was replaced on measurement. A ratio
+carries no information about how much data produced it: when scatter dominates,
+both reduced chi-squared values approach the same noise floor and their ratio
+approaches 1 however many points were measured, even though the model difference
+is being resolved better and better. Measured over 80 synthetic datasets per
+cell, the rate at which a preferred model is declared *and is correct*:
+
+| `Jc` scatter | points | fixed 20 % margin | `Delta_AIC >= 10` |
+| --- | --- | --- | --- |
+| 1 % | 20 | 65 % | 45 % |
+| 1 % | 80 | 54 % | 80 % |
+| 1 % | 160 | 56 % | 92 % |
+| 2 % | 20 | 34 % | 11 % |
+| 2 % | 80 | 25 % | 42 % |
+| 2 % | 160 | 26 % | 59 % |
+| 3 % | 20 | 16 % | 0 % |
+| 3 % | 160 | 0 % | 39 % |
+
+The fixed margin is flat in the number of points, and at 3 % scatter it gets
+*worse* as data are added. It also declares the wrong model in up to 6 % of
+trials at small sample sizes, where the AIC rule stays at or below 1 %. The AIC
+rule is therefore both more decisive when the data support a verdict and more
+cautious when they do not.
+
+**How good must the data be to answer this at all.** The two models differ by at
+most 0.097 in `rho_s` (R5), so the question is demanding. With 20 points and the
+`Delta_AIC` rule, a preferred model is declared in essentially every trial at
+0.2 % scatter on `Jc`, in about three quarters of trials at 0.5 %, and hardly
+ever above 2 %. A few hundred points extend the reach to roughly 3 %. Below that
+quality the honest answer is `MODELS_INDISTINGUISHABLE`, and the user needs to
+see it, because the extracted `Delta(0)` differs by about 20 % between the two
+models.
+
+**The reach depends on the coupling strength, not only on the scatter.** The
+two shipped example configurations were each run 120 times with fresh noise:
+
+| configuration | 0.2 % | 0.5 % | 0.75 % | 1 % | 1.5 % | 2 % | 3 % |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| clean, `2D/kTc = 3.53`, 22 points | 100 % | 100 % | 100 % | 93 % | 51 % | 17 % | 1 % |
+| dirty, `2D/kTc = 4.30`, 25 points | 100 % | 67 % | 22 % | 4 % | 2 % | 0 % | 0 % |
+
+(percentage of trials in which a model is declared, and it is the right one.)
+
+The strongly coupled case is markedly harder, and for a physical reason: a
+larger gap keeps `rho_s` pinned near 1 up to a higher reduced temperature, which
+compresses the window where the two models differ at all. So "a few per cent of
+scatter" is not a single universal threshold; the better the coupling ratio, the
+better the data have to be.
+
+**The rule never named the wrong model.** Across every cell of both tables above,
+in 1920 trials, the `Delta_AIC >= 10` rule declared an incorrect model zero
+times. Its failure mode is to decline, which is the failure mode to prefer:
+`MODELS_INDISTINGUISHABLE` costs the user nothing but a conclusion they were not
+entitled to, whereas a confidently wrong model shifts the reported `Delta(0)` by
+about 20 %.
+
+Note finally that all of this concerns point-to-point *scatter*. A systematic
+error common to the whole dataset does not distort the shape of `rho_s(T)` and
+therefore does not degrade the comparison at all (R8.3).
+
+Note also that the two models remain far apart in what they *imply*: fitting
+clean data with the dirty expression shifts `Delta(0)` by about 20 % while
+returning an entirely plausible number (R9). The gap is sensitive to the model
+choice even where the data cannot make that choice, which is why the verdict is
+reported rather than applied silently.
 
 **Coupling regime.** From `R = 2 Delta0 / (kB Tc)`:
 

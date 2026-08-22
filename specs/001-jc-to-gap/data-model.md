@@ -145,9 +145,11 @@ the equations it implements.
 | `converged` | `bool` | — | false means the result must not be displayed as a fit (FR-014) |
 | `n_function_evaluations` | `int` | — | |
 
-The units of `residuals` depend on the route: dimensionless superfluid-density
-difference for `TWO_STEP`, difference of natural logarithms for `DIRECT`
-(see research R6). The route field is what tells a reader which it is.
+`residuals` are differences of natural logarithms in both routes: of `lambda`
+for `TWO_STEP`, of `Jc` for `DIRECT` (research R6). They are therefore
+fractional deviations to first order, and comparable in magnitude between the
+two routes, though not the same quantity. The route field is what tells a
+reader which it is.
 
 ---
 
@@ -298,7 +300,7 @@ The only failure shape the API ever returns (constitution IV).
 | `UNKNOWN_UNIT` | unrecognised unit string | `unit` |
 | `KAPPA_TOO_SMALL` | `kappa <= exp(-0.5)`, model undefined | `kappa` |
 | `NOT_TYPE_II` | `kappa <= 1/sqrt(2)` | `kappa` |
-| `NO_ROOT_TYPE_II` | no admissible root of equation (1) on `lambda > xi` | `temperature_K`, `jc`, `xi` |
+| `NO_ROOT_TYPE_II` | `Jc` reaches the ceiling (1a) of equation (1), i.e. the data imply `kappa <= 1` for this `xi` | `temperature_K`, `jc`, `xi`, `jc_max` |
 | `ROOT_BRACKETING_FAILED` | upper bracket could not be expanded far enough | `temperature_K` |
 | `TC_FIXED_BELOW_DATA` | a fixed `Tc` is not above every measured temperature | `tc_fixed_K`, `t_max_K` |
 | `FIT_DID_NOT_CONVERGE` | the optimiser terminated without convergence | `route`, `model`, `status` |

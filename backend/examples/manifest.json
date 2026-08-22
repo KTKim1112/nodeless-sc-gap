@@ -1,0 +1,45 @@
+[
+  {
+    "name": "nbti_like",
+    "title": "NbTi-like film: weak-coupling, clean limit, with Hc2",
+    "file": "nbti_like.txt",
+    "coherence_source": "FROM_HC2",
+    "n_points": 22,
+    "expects_model_preference": true,
+    "suggested_settings": {
+      "coherence_source": "FROM_HC2",
+      "gap_model": "CLEAN",
+      "fit_route": "TWO_STEP"
+    },
+    "truth": {
+      "tc_K": 9.2,
+      "lambda0_nm": 250.0,
+      "delta0_meV": 1.3992825751071338,
+      "coupling_ratio": 3.53,
+      "kappa": 45.0,
+      "gap_model": "CLEAN"
+    }
+  },
+  {
+    "name": "nb3sn_like",
+    "title": "Nb3Sn-like film: strong-coupling, dirty limit, fixed kappa",
+    "file": "nb3sn_like.txt",
+    "coherence_source": "FIXED_KAPPA",
+    "n_points": 25,
+    "expects_model_preference": false,
+    "suggested_settings": {
+      "coherence_source": "FIXED_KAPPA",
+      "kappa_fixed": 30.0,
+      "gap_model": "DIRTY",
+      "fit_route": "TWO_STEP"
+    },
+    "truth": {
+      "tc_K": 17.8,
+      "lambda0_nm": 120.0,
+      "delta0_meV": 3.2978534394229593,
+      "coupling_ratio": 4.3,
+      "kappa": 30.0,
+      "gap_model": "DIRTY"
+    }
+  }
+]

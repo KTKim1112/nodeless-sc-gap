@@ -71,12 +71,12 @@ backend/
       routes.py             all endpoints
       deps.py               shared dependencies (job store)
     schemas.py              Pydantic request/response models + conversion
-    errors.py               CoreError hierarchy, code constants
     jobs.py                 in-memory job store, background execution
     core/
       __init__.py
       constants.py          PHI0, MU0, KB, MEV_TO_J, BCS_ALPHA, BCS_RATIO
       types.py              enums and dataclasses from data-model.md
+      errors.py             CoreError hierarchy, code constants
       units.py              unit conversion helpers
       parsing.py            text -> numeric table
       lambda_solver.py      equation (1): xi_from_hc2, solve_lambda, lambda_table
@@ -139,7 +139,7 @@ Every runtime dependency needs a reason here.
 | FastAPI | The chosen interface is HTTP. Its automatic OpenAPI output is what makes the frontend types generated rather than hand-written, which removes an entire class of mistake. |
 | Pydantic | Comes with FastAPI. Validating the request shape declaratively is strictly less code than validating it by hand. |
 | NumPy | Array arithmetic across temperature points. |
-| SciPy | `brentq` for equation (1), `quad` for the clean-limit integral, `least_squares` for the fit. Reimplementing any of these would be worse. |
+| SciPy | `brentq` for equation (1) and `least_squares` for the fit. Reimplementing either would be worse. The clean-limit integral uses a fixed Gauss-Legendre rule built from NumPy, not SciPy quadrature — see section 5. |
 | React + Vite | Chosen by the project owner in preference to a lighter option. |
 | TypeScript | Pays for itself here specifically: the API shape is generated, so a backend change surfaces as a compile error rather than as a blank screen at runtime. |
 | Plotly.js | Interactive plots plus a built-in PNG export button, which satisfies half of FR-027 with no code. |
@@ -169,13 +169,19 @@ is single-user, single-container, and loses nothing by forgetting jobs on
 restart. If either assumption ever changes, this is the one component to
 replace, and it is isolated in `jobs.py` for that reason.
 
-### Caching the clean-limit integral
+### Evaluating the clean-limit integral
 
-`rho_s_clean` depends on the single scalar `d = Delta(T)/(2 kB T)`
-(research R4). During a fit it is evaluated of order `n_points *
-n_iterations` times on nearby values. The implementation caches on `d` rounded
-to a fixed relative precision, which keeps the cost of a fit an order of
-magnitude lower without changing the result within the fit tolerance.
+`rho_s_clean` reduces to a single-argument integral in `d = Delta(T)/(2 kB T)`
+(research R4). A fit evaluates it of order `n_points x n_iterations` times, and
+a Monte Carlo run multiplies that by the number of draws.
+
+Caching was the first idea and was discarded: during a fit the parameters move
+every iteration, so `d` is a different float every time and the hit rate is
+near zero. The chosen approach is a fixed-node panelled Gauss-Legendre rule,
+evaluated for all temperature points in one array operation. Measured against
+adaptive quadrature it is 250 times faster at the same accuracy, and it is
+deterministic, which the reproducibility requirement needs. Research R4 records
+the measurements.
 
 ### Serving the frontend from the backend
 

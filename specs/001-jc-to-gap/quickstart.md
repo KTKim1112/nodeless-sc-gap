@@ -85,8 +85,8 @@ coupling ratio near 3.5 for a weak-coupling example.
 
 ### 3. Fixed Ginzburg-Landau parameter (AS-3, FR-006)
 
-Choose the built-in example `mgb2_like`, coherence source `FIXED_KAPPA`,
-`kappa = 40`.
+Choose the built-in example `nb3sn_like`, coherence source `FIXED_KAPPA`,
+`kappa = 30`.
 
 **Pass:** results appear, and the table now also reports the implied `xi(T)`.
 
@@ -102,8 +102,11 @@ check is that the *user* can see it.
 
 Switch `gap_model` between `CLEAN` and `DIRTY`.
 
-**Pass:** the diagnostics panel reports both reduced chi-squared values and
-either names a preferred model or states that the data do not distinguish them.
+**Pass:** the diagnostics panel reports both reduced chi-squared values, the
+Akaike separation, and either names a preferred model or states that the data do
+not distinguish them. On `nbti_like` it names one; on `nb3sn_like` it declines,
+because 3 % scatter on `Jc` cannot separate the two (research R10). Both are
+correct answers and the contrast is why two examples are shipped.
 
 ### 6. Uncertainty propagation (AS-6, FR-015 to FR-018)
 

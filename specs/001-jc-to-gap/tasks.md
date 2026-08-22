@@ -38,32 +38,42 @@ No web framework anywhere in this phase. Verified by `pytest` alone.
 
 | Id | Task | Depends on |
 | --- | --- | --- |
-| T101 | `backend/pyproject.toml`: package metadata, runtime deps (numpy, scipy, fastapi, pydantic, uvicorn), dev deps (pytest) | — |
-| T102 | `core/constants.py` from research R0 | T101 |
-| T103 | `core/types.py`: every enum and dataclass in `data-model.md` | T101 |
-| T104 | `core/units.py`: `jc_to_si`, `xi_to_si`, `j_to_meV`, `m_to_nm` and inverses; unknown unit raises `UnknownUnitError` | T102, T103 |
-| T105 | `core/errors.py` *(placed in `app/errors.py`, imported by core)*: `CoreError` base carrying `code` and `params`, one subclass per code in the `data-model.md` catalogue | T103 |
-| T106 | `core/parsing.py`: text to float matrix; separators, header detection, comment lines, per-cell error reporting with row and column | T105 |
-| T107 | `core/lambda_solver.py`: `xi_from_hc2`, `jc_model`, `solve_lambda` (bracket on `lambda > xi`, expand upper bound, `brentq`), `lambda_from_fixed_kappa` (explicit form, research R7), `build_lambda_table` dispatching on `CoherenceSource` | T102, T105 |
-| T108 | `core/gap_models.py`: `delta_of_T` (research R3), `rho_s_clean` via the dimensionless integral (research R4) with the `d >= 30` short circuit and caching, `rho_s_dirty` (research R5), `rho_s` dispatching on `GapModel` | T102 |
-| T109 | `core/fitting.py`: `fit_route_a`, `fit_route_b`, shared initial guesses and bounds (research R6), covariance from the Jacobian, `converged` flag, derived coupling ratio with propagated error | T107, T108 |
-| T110 | `core/diagnostics.py`: every threshold in research R10, emitting `Warning_` objects; `SELF_FIELD_TRANSPORT_REQUIRED` always present | T107, T109 |
-| T111 | `core/montecarlo.py`: log-normal sampling via research R8.2 equations (7) and (8); `SYSTEMATIC` and `INDEPENDENT` correlation modes (R8.3); full-chain re-run per draw; discard-and-count with the `M < max(100, N/2)` bound; percentile intervals; progress callback; seeded RNG | T109 |
-| T112 | `core/pipeline.py`: `run_lambda_table`, `run_analysis` composing T107 to T110 into `AnalysisResult`, plus the dense `SuperfluidCurve` | T107-T110 |
-| T113 [P] | `tests/test_core_purity.py`: walk `core/`, parse each module's imports, fail on any framework import | T112 |
-| T114 [P] | `tests/test_units.py`: round trips, unknown unit raises | T104 |
-| T115 [P] | `tests/test_parsing.py`: all four separators, header present and absent, comment lines, non-numeric cell reports the right row and column, fewer than four rows rejected | T106 |
-| T116 [P] | `tests/test_lambda_solver.py`: substituting the solved `lambda` back into equation (1) reproduces `Jc` to 1e-9; fixed-kappa explicit form agrees with the root finder; `NO_ROOT_TYPE_II` raised when `Jc` is impossibly large | T107 |
-| T117 [P] | `tests/test_gap_models.py`: `rho_s(0)=1` and `rho_s(Tc)=0` for both models; monotonic decreasing; clean-limit integral equals 1 at `d=0`; `Delta(T)` limits; dirty exceeds clean by at least 0.03 over `0.4 < T/Tc < 0.95`. Do **not** assert that ordering below `T/Tc = 0.25` — research R5 explains why it reverses there | T108 |
-| T118 | `tests/test_fitting.py`: **the round trip.** Generate synthetic `Jc(T)` from `lambda0=200 nm`, `Delta0=1.5 meV`, `Tc=10 K`, `kappa=40`; recover all three to within 1 % by route A and by route B; assert the two routes agree; assert `2 Delta0/(kB Tc) = 3.52775` when `Delta0 = 1.763875 kB Tc` | T109 |
-| T119 [P] | `tests/test_diagnostics.py`: each threshold in research R10 checked just inside and just outside its boundary | T110 |
-| T120 [P] | `tests/test_montecarlo.py`: same seed gives identical output; a wider input sigma gives a wider interval; too many failures raises `MC_TOO_MANY_FAILURES`; log-normal draws reproduce the requested mean and relative sigma | T111 |
-| T120a [P] | `tests/test_montecarlo.py`: **analytic cross-check.** With `kappa = 40`, 5 % on `Jc` and 3 % on `Hc2`, the Monte Carlo relative sigma of `lambda` must match the closed form of research R8.4, `1.815 %`, to within the estimator precision of equation (14) | T111 |
-| T120b [P] | `tests/test_montecarlo.py`: **the correlation-mode consequence.** In `SYSTEMATIC` mode with fixed `kappa`, a `Jc` uncertainty must leave `Delta0` and `Tc` unchanged to machine precision while moving `lambda0`; in `INDEPENDENT` mode it must move all three (research R8.3) | T111 |
-| T121 | `tests/test_legacy_agreement.py`: run each `legacy/` script on a fixture and assert the new core reproduces its `lambda(T)` to 1e-9 relative | T107 |
-| T122 [P] | `backend/examples/nbti_like.txt` and `mgb2_like.txt`, generated from known parameters so the expected answer is known | T112 |
+| T101 | [done] `backend/pyproject.toml`: package metadata, runtime deps (numpy, scipy, fastapi, pydantic, uvicorn), dev deps (pytest) | — |
+| T102 | [done] `core/constants.py` from research R0 | T101 |
+| T103 | [done] `core/types.py`: every enum and dataclass in `data-model.md` | T101 |
+| T104 | [done] `core/units.py`: `jc_to_si`, `xi_to_si`, `j_to_meV`, `m_to_nm` and inverses; unknown unit raises `UnknownUnitError` | T102, T103 |
+| T105 | [done] `core/errors.py`: `CoreError` base carrying `code` and `params`, one subclass per code in the `data-model.md` catalogue. It lives in `core/` and the API layer imports it, not the reverse — the dependency arrow of `plan.md` section 2 must not be bent for this | T103 |
+| T106 | [done] `core/parsing.py`: text to float matrix; separators, header detection, comment lines, per-cell error reporting with row and column | T105 |
+| T107 | [done] `core/lambda_solver.py`: `xi_from_hc2`, `jc_model`, `solve_lambda` (bracket on `lambda > xi`, expand upper bound, `brentq`), `lambda_from_fixed_kappa` (explicit form, research R7), `build_lambda_table` dispatching on `CoherenceSource` | T102, T105 |
+| T108 | [done] `core/gap_models.py`: `delta_of_T` (research R3), `rho_s_clean` via the dimensionless integral (research R4) with the `d >= 30` short circuit and caching, `rho_s_dirty` (research R5), `rho_s` dispatching on `GapModel` | T102 |
+| T109 | [done] `core/fitting.py`: `fit_route_a`, `fit_route_b`, shared initial guesses and bounds (research R6), covariance from the Jacobian, `converged` flag, derived coupling ratio with propagated error | T107, T108 |
+| T110 | [done] `core/diagnostics.py`: every threshold in research R10, emitting `Warning_` objects; `SELF_FIELD_TRANSPORT_REQUIRED` always present | T107, T109 |
+| T111 | [done] `core/montecarlo.py`: log-normal sampling via research R8.2 equations (7) and (8); `SYSTEMATIC` and `INDEPENDENT` correlation modes (R8.3); full-chain re-run per draw; discard-and-count with the `M < max(100, N/2)` bound; percentile intervals; progress callback; seeded RNG | T109 |
+| T112 | [done] `core/pipeline.py`: `run_lambda_table`, `run_analysis` composing T107 to T110 into `AnalysisResult`, plus the dense `SuperfluidCurve` | T107-T110 |
+| T113 [P] | [done] `tests/test_core_purity.py`: walk `core/`, parse each module's imports, fail on any framework import | T112 |
+| T114 [P] | [done] `tests/test_units.py`: round trips, unknown unit raises | T104 |
+| T115 [P] | [done] `tests/test_parsing.py`: all four separators, header present and absent, comment lines, non-numeric cell reports the right row and column, fewer than four rows rejected | T106 |
+| T116 [P] | [done] `tests/test_lambda_solver.py`: substituting the solved `lambda` back into equation (1) reproduces `Jc` to 1e-9; fixed-kappa explicit form agrees with the root finder; `NO_ROOT_TYPE_II` raised when `Jc` is impossibly large | T107 |
+| T117 [P] | [done] `tests/test_gap_models.py`: `rho_s(0)=1` and `rho_s(Tc)=0` for both models; monotonic decreasing; clean-limit integral equals 1 at `d=0`; `Delta(T)` limits; dirty exceeds clean by at least 0.028 over `0.4 <= T/Tc <= 0.95`. Do **not** assert that ordering below `T/Tc = 0.25` — research R5 explains why it reverses there | T108 |
+| T118 | [done] `tests/test_fitting.py`: **the round trip.** Generate synthetic `Jc(T)` from `lambda0=200 nm`, `Delta0=1.5 meV`, `Tc=10 K`, `kappa=40`; recover all three to within 1 % by route A and by route B; assert the two routes agree; assert `2 Delta0/(kB Tc) = 3.52775` when `Delta0 = 1.763875 kB Tc` | T109 |
+| T119 [P] | [done] `tests/test_diagnostics.py`: each threshold in research R10 checked just inside and just outside its boundary | T110 |
+| T120 [P] | [done] `tests/test_montecarlo.py`: same seed gives identical output; a wider input sigma gives a wider interval; too many failures raises `MC_TOO_MANY_FAILURES`; log-normal draws reproduce the requested mean and relative sigma | T111 |
+| T120a [P] | [done] `tests/test_montecarlo.py`: **analytic cross-check.** With `kappa = 40`, 5 % on `Jc` and 3 % on `Hc2`, the Monte Carlo relative sigma of `lambda` must match the closed form of research R8.4, `1.815 %`, to within the estimator precision of equation (14) | T111 |
+| T120b [P] | [done] `tests/test_montecarlo.py`: **the correlation-mode consequence.** In `SYSTEMATIC` mode with fixed `kappa`, a `Jc` uncertainty must leave `Delta0` and `Tc` unchanged to machine precision while moving `lambda0`; in `INDEPENDENT` mode it must move all three (research R8.3) | T111 |
+| T121 | [done] `tests/test_legacy_agreement.py`: run each `legacy/` script on a fixture and assert the new core reproduces its `lambda(T)` to 1e-9 relative | T107 |
+| T122 [P] | [done] `backend/examples/nbti_like.txt` and `nb3sn_like.txt`, generated from known parameters so the expected answer is known. One carries 0.2 % scatter so the clean/dirty comparison is decisive, the other a realistic 3 % so it honestly reports `MODELS_INDISTINGUISHABLE` (research R10) | T112 |
 
-**Gate:** `pytest -v` green, T118 in particular.
+**Gate:** `pytest -v` green, T118 in particular. **Met**: 139 tests pass. The
+round trip recovers `lambda0`, `Delta0` and `Tc` to better than 1e-9
+relative by both routes and in all three coherence modes.
+
+Added beyond the original list, each because a measurement showed it was needed:
+
+| Id | Task | Why |
+| --- | --- | --- |
+| T123 | `core/validation.py`: `build_dataset` and `check_settings` | positivity and settings checks need to name the offending row, which a frozen dataclass is a poor place to do |
+| T124 | `tests/test_examples.py`: run the shipped examples end to end from raw text | nothing else exercised parsing, units, inversion, fit and diagnostics together |
+| T125 | `examples/generate.py` | the examples must be reproducible from stated parameters, not hand-edited |
 
 ---
 
@@ -72,7 +82,7 @@ No web framework anywhere in this phase. Verified by `pytest` alone.
 | Id | Task | Depends on |
 | --- | --- | --- |
 | T201 | `app/schemas.py`: Pydantic models for every schema in `contracts/openapi.yaml`, plus `to_domain` and `from_domain` conversion including display units | T103, T104 |
-| T202 | `app/main.py`: application factory, `CoreError` exception handler producing `{"code","params"}`, `/api/health` | T105, T201 |
+| T202 | `app/main.py`: application factory, `CoreError` exception handler producing `{"code","params"}` and mapping each code to an HTTP status (the mapping lives here, never in `core/`), `/api/health` | T105, T201 |
 | T203 | `app/api/routes.py`: `POST /api/parse`, `POST /api/lambda`, `POST /api/analyze` | T112, T201 |
 | T204 | `app/jobs.py`: in-memory job store, thread runner, progress updates | T111 |
 | T205 | `app/api/routes.py`: `POST /api/uncertainty`, `GET /api/jobs/{job_id}` | T204 |
