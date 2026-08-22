@@ -65,6 +65,13 @@ always self-describing (constitution VI).
 | `root_xtol` | `float` | `1e-15` | absolute tolerance of the root finder, in metres |
 | `root_rtol` | `float` | `1e-12` | relative tolerance of the root finder |
 
+**The two root tolerances are not exposed over the wire.** They are termination
+conditions of the Brent solver, and the numerical error they control is many
+orders of magnitude below any experimental uncertainty; tightening them cannot
+improve a result and loosening them can only break one. Putting them in the
+request would have made every client send two numbers it has no basis for
+choosing. They stay here, in the core, with their defaults.
+
 ---
 
 ## `UncertaintySettings`

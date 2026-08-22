@@ -88,7 +88,10 @@ def _mount_frontend(app: FastAPI) -> None:
 
     index = STATIC_DIR / "index.html"
 
-    @app.get("/{full_path:path}", include_in_schema=False)
+    # response_model=None because the return type is a union of Response
+    # subclasses, which FastAPI would otherwise try to interpret as a Pydantic
+    # response model and refuse.
+    @app.get("/{full_path:path}", include_in_schema=False, response_model=None)
     async def spa(full_path: str) -> FileResponse | JSONResponse:
         """Anything not matched above is a frontend route, so serve the page.
 

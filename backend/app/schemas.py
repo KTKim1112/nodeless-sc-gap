@@ -127,8 +127,13 @@ class Settings(Model):
     film_thickness_nm: float | None = Field(
         default=None, description="Diagnostics only; never enters the physics"
     )
-    root_xtol: float = 1e-15
-    root_rtol: float = 1e-12
+
+    # The root-finder tolerances of core.AnalysisSettings are deliberately not
+    # fields here. They are Brent termination conditions whose numerical error
+    # is orders of magnitude below any experimental uncertainty, so a caller has
+    # no basis for choosing them and no benefit from doing so. Exposing them
+    # would have obliged every client to send two numbers it cannot reason
+    # about. The core defaults apply.
 
     def to_domain(self) -> t.AnalysisSettings:
         return t.AnalysisSettings(
@@ -141,8 +146,6 @@ class Settings(Model):
                 u.nm_to_m(self.film_thickness_nm)
                 if self.film_thickness_nm is not None else None
             ),
-            root_xtol=self.root_xtol,
-            root_rtol=self.root_rtol,
         )
 
 

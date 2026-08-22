@@ -11,6 +11,8 @@ venv/
 # --- Node / frontend ---
 node_modules/
 dist/
+# Vite builds the frontend straight into where FastAPI serves it from.
+backend/static/
 .vite/
 
 # --- Editors / OS ---

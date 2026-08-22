@@ -107,17 +107,27 @@ Added while implementing:
 
 | Id | Task | Depends on |
 | --- | --- | --- |
-| T301 | Scaffold Vite + React + TypeScript in `frontend/`, `npm run gen:api` script, dev proxy for `/api` | T202 |
-| T302 | `src/api/generated.ts` produced from the running backend; `src/api/client.ts` typed fetch wrappers that surface `ErrorPayload` | T301 |
-| T303 | `src/errorMessages.ts`: Korean sentence for every error and warning code in `data-model.md`, with parameter interpolation and a visible fallback for an unknown code | T302 |
-| T304 | `src/format.ts`: significant figures, `value +/- stderr` rendering, unit suffixes | — |
-| T305 | `DataInput.tsx`: file upload, paste area, example picker | T302 |
-| T306 | `ColumnPreview.tsx`: shows the parse result for confirmation (FR-003) | T305 |
-| T307 | `SettingsPanel.tsx`: units, coherence source with conditional `kappa`/`Hc2`/`xi` fields, gap model, route, optional fixed `Tc`, optional thickness | T302 |
-| T308 | `LambdaTable.tsx` and `FitSummary.tsx`; `FitSummary` refuses to display an unconverged fit (FR-014) | T302, T304 |
-| T309 | `App.tsx`: wire the flow, loading and error states | T305-T308 |
+| T301 | [done] Scaffold Vite + React + TypeScript in `frontend/`, `npm run gen:api` script, dev proxy for `/api` | T202 |
+| T302 | [done] `src/api/generated.ts` produced from the running backend; `src/api/client.ts` typed fetch wrappers that surface `ErrorPayload` | T301 |
+| T303 | [done] `src/errorMessages.ts`: Korean sentence for every error and warning code in `data-model.md`, with parameter interpolation and a visible fallback for an unknown code | T302 |
+| T304 | [done] `src/format.ts`: significant figures, `value +/- stderr` rendering, unit suffixes | — |
+| T305 | [done] `DataInput.tsx`: file upload, paste area, example picker | T302 |
+| T306 | [done] `ColumnPreview.tsx`: shows the parse result for confirmation (FR-003) | T305 |
+| T307 | [done] `SettingsPanel.tsx`: units, coherence source with conditional `kappa`/`Hc2`/`xi` fields, gap model, route, optional fixed `Tc`, optional thickness | T302 |
+| T308 | [done] `LambdaTable.tsx` and `FitSummary.tsx`; `FitSummary` refuses to display an unconverged fit (FR-014) | T302, T304 |
+| T309 | [done] `App.tsx`: wire the flow, loading and error states | T305-T308 |
 
-**Gate:** quickstart steps 1, 2, 3 and 8 pass in the browser.
+**Gate:** quickstart steps 1, 2, 3 and 8 pass in the browser. **Met**: the page
+loads, an example runs end to end through the dev proxy, and the production
+build is served by FastAPI on one port.
+
+Notes from implementing:
+
+| Id | Task | Why |
+| --- | --- | --- |
+| T310 | `frontend/.nvmrc` pinning Node 24.19.0 | the toolchain is managed by nvm, so the version belongs in the repository rather than in someone's memory |
+| T311 | `root_xtol` / `root_rtol` removed from the wire model | the generated types made them REQUIRED fields, which would have obliged every client to send two Brent termination conditions it has no basis for choosing. Found by the type checker on the first build |
+| T312 | TypeScript pinned to 5.x | `openapi-typescript` 7 requires it, and generated API types are the whole reason TypeScript is here, so the generator wins |
 
 ---
 
