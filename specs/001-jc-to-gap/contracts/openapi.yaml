@@ -462,7 +462,20 @@ components:
           oneOf:
             - $ref: "#/components/schemas/GapModel"
             - type: "null"
-          description: null when the data do not distinguish the two (FR-020)
+          description: >
+            null when the data do not separate the two models by enough to say
+            (FR-020). At a few per cent of scatter on Jc that is the common
+            outcome, not a failure - see research R10.
+        delta_aic:
+          type: [number, "null"]
+          description: >
+            Akaike separation of the two gap models, m * ln(chi2_worse /
+            chi2_better). A preferred model is declared at 10 or above.
+        preferred_model_weight:
+          type: [number, "null"]
+          description: >
+            Akaike weight: the relative support for whichever model fits
+            better, whether or not it cleared the threshold to be declared.
         coupling_ratio: { type: number }
         coupling_regime:
           type: string
