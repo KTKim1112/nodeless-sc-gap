@@ -52,6 +52,21 @@ export function interval(d: ParameterDistribution | undefined | null): string {
   return `[${fmt(d.ci_low)}, ${fmt(d.ci_high)}]`
 }
 
+/**
+ * A fixed number of decimals, trailing zeros kept.
+ *
+ * For columns of numbers. `fmt` drops trailing zeros, which leaves 45.02, 44.99
+ * and 45 in the same column with their decimal points out of line and the eye
+ * unable to compare them at a glance. Tabular figures only align if every cell
+ * has the same number of digits after the point.
+ */
+export function fixed(value: number | null | undefined, decimals: number): string {
+  if (value === null || value === undefined || !Number.isFinite(value)) return '—'
+  const abs = Math.abs(value)
+  if (abs !== 0 && (abs < 1e-3 || abs >= 1e7)) return value.toExponential(3)
+  return value.toFixed(decimals)
+}
+
 /** Percentages for progress bars and the like. */
 export function percent(fraction: number, digits = 0): string {
   return `${(fraction * 100).toFixed(digits)}%`

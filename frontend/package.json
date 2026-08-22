@@ -8,7 +8,9 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "lint": "oxlint",
-    "gen:api": "openapi-typescript http://127.0.0.1:8000/openapi.json -o src/api/generated.ts"
+    "gen:api": "openapi-typescript http://127.0.0.1:8000/openapi.json -o src/api/generated.ts",
+    "test:e2e": "playwright test",
+    "shots": "playwright test screenshots.spec.ts"
   },
   "dependencies": {
     "plotly.js-dist-min": "^3.1.1",
@@ -16,6 +18,7 @@
     "react-dom": "^19.2.8"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "@types/node": "^24.13.3",
     "@types/plotly.js-dist-min": "^2.3.4",
     "@types/react": "^19.2.17",

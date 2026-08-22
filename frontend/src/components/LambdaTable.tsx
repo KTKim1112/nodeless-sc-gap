@@ -6,7 +6,7 @@
  * type-II range is visible here before it shows up as a warning.
  */
 import type { LambdaResponse } from '../api/client'
-import { fmt } from '../format'
+import { fixed } from '../format'
 
 interface Props {
   table: LambdaResponse
@@ -22,7 +22,7 @@ export function LambdaTable({ table, maxRows = 200 }: Props) {
       <h2>온도별 결과</h2>
 
       <div className="table-scroll tall">
-        <table className="results numeric">
+        <table className="results numeric compact">
           <thead>
             <tr>
               <th>T [K]</th>
@@ -35,11 +35,11 @@ export function LambdaTable({ table, maxRows = 200 }: Props) {
           <tbody>
             {Array.from({ length: shown }, (_, i) => (
               <tr key={i}>
-                <td>{fmt(table.temperature_K[i], 3)}</td>
+                <td>{fixed(table.temperature_K[i], 3)}</td>
                 <td>{table.jc_A_per_m2[i].toExponential(3)}</td>
-                <td>{fmt(table.xi_nm[i], 3)}</td>
-                <td>{fmt(table.lambda_nm[i], 2)}</td>
-                <td>{fmt(table.kappa[i], 2)}</td>
+                <td>{fixed(table.xi_nm[i], 3)}</td>
+                <td>{fixed(table.lambda_nm[i], 2)}</td>
+                <td>{fixed(table.kappa[i], 2)}</td>
               </tr>
             ))}
           </tbody>

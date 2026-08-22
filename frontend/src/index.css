@@ -58,6 +58,18 @@ body {
   font-family: system-ui, -apple-system, "Segoe UI", "Malgun Gothic", sans-serif;
   font-size: 15px;
   line-height: 1.6;
+
+  /* Korean has no spaces inside a word, and the default breaking rule will
+   * split one anywhere it likes -- "필요합니 / 다." keep-all breaks at word
+   * boundaries instead.
+   *
+   * break-word rather than anywhere: `anywhere` also lets the browser count a
+   * single character as an element's minimum width, so on a narrow screen a
+   * table will happily crush its columns until "meV" stacks as three lines of
+   * one letter. `break-word` protects against an over-long token just the same
+   * without collapsing the intrinsic width. */
+  word-break: keep-all;
+  overflow-wrap: break-word;
 }
 
 .page {
@@ -196,7 +208,15 @@ thead th {
 table.numeric td { font-family: var(--code); font-variant-numeric: tabular-nums; text-align: right; }
 table.numeric th { text-align: right; }
 
-table.preview { font-family: var(--code); font-size: 0.82rem; }
+/* Columns of numbers read better sized to their content than stretched across
+ * the card, which pushes related figures apart and makes them hard to compare.
+ * The cap stops a wide table from running off on a large screen. */
+table.compact { width: auto; max-width: none; }
+table.compact th, table.compact td { padding-left: 0.85rem; padding-right: 0.85rem; }
+table.compact th:first-child, table.compact td:first-child { padding-left: 0; }
+
+table.preview { width: auto; font-family: var(--code); font-size: 0.82rem; }
+table.preview th, table.preview td { padding-left: 0.9rem; padding-right: 0.9rem; }
 table.preview .index { color: var(--text-muted); width: 2.2rem; text-align: right; }
 table.preview th.used .role { display: block; font-family: system-ui, sans-serif; color: var(--accent); }
 table.preview th.unused .role { display: block; font-family: system-ui, sans-serif; color: var(--text-muted); }
@@ -204,10 +224,15 @@ table.preview th .source { display: block; font-weight: 400; color: var(--text-m
 table.preview td.unused, table.preview th.unused { opacity: 0.4; }
 table.preview td { text-align: right; }
 
+/* Below this the columns would start fighting each other; the enclosing
+ * .table-scroll then scrolls sideways, which is legible where a crushed table
+ * is not. */
+table.results { min-width: 33rem; }
 table.results .quantity { font-family: var(--code); white-space: nowrap; }
-table.results .unit { color: var(--text-muted); }
+table.results .unit { color: var(--text-muted); white-space: nowrap; }
 table.results .value { font-family: var(--code); font-variant-numeric: tabular-nums; white-space: nowrap; }
-table.results .note-col, table.results .note { max-width: 34ch; }
+table.results .note-col, table.results .note { min-width: 18ch; max-width: 34ch; }
+table.results.compact { min-width: 0; }
 
 /* --- badges --- */
 

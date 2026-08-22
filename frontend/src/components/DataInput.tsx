@@ -22,7 +22,15 @@ export function DataInput({ text, onTextChange, onExampleChosen, disabled }: Pro
   const fileInput = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    api.examples().then(setExamples).catch(() => setExamples([]))
+    // A failure here used to be swallowed, which showed as a toolbar with no
+    // example buttons and no explanation -- indistinguishable from a build that
+    // simply has no examples. An unreachable backend has to say so.
+    api.examples()
+      .then(setExamples)
+      .catch((e) => {
+        setExamples([])
+        setProblem(e instanceof ApiError ? errorMessage(e.code, e.params) : String(e))
+      })
   }, [])
 
   async function chooseExample(name: string) {

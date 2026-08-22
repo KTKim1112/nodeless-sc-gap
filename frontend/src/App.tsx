@@ -57,6 +57,18 @@ export default function App() {
   const [text, setText] = useState('')
   const [parsed, setParsed] = useState<ParseResponse | null>(null)
   const [parseError, setParseError] = useState<string | null>(null)
+  /**
+   * The text that `parsed` actually describes.
+   *
+   * Comparing it against the current text is what tells us whether `parsed` is
+   * stale. A boolean flag set from the effect does not work: between the click
+   * that changes the text and the effect that would set the flag there is a
+   * render in which the button is still enabled and `parsed` still holds the
+   * previous dataset, so pasting new data and clicking straight away analyses
+   * the old data. Derived state has no such window. Found by the end-to-end
+   * test doing exactly that, twice.
+   */
+  const [parsedText, setParsedText] = useState<string | null>(null)
 
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS)
   const [jcUnit, setJcUnit] = useState<JcUnit>('A_PER_CM2')
@@ -71,18 +83,27 @@ export default function App() {
   useEffect(() => {
     if (!text.trim()) {
       setParsed(null)
+      setParsedText(null)
       setParseError(null)
       return
     }
+    let cancelled = false
     const timer = setTimeout(() => {
       api.parse(text)
-        .then((p) => { setParsed(p); setParseError(null) })
+        .then((p) => {
+          if (cancelled) return
+          setParsed(p)
+          setParsedText(text)
+          setParseError(null)
+        })
         .catch((e) => {
+          if (cancelled) return
           setParsed(null)
+          setParsedText(text)     // this text is known-bad, not merely unparsed
           setParseError(e instanceof ApiError ? errorMessage(e.code, e.params) : String(e))
         })
     }, 250)
-    return () => clearTimeout(timer)
+    return () => { cancelled = true; clearTimeout(timer) }
   }, [text])
 
   // A new dataset invalidates whatever was on screen.
@@ -95,11 +116,14 @@ export default function App() {
   }, [])
 
   const columnsNeeded = settings.coherence_source === 'FIXED_KAPPA' ? 2 : 3
+  /** `parsed` describes an older version of the text than the one on screen. */
+  const stale = text.trim() !== '' && parsedText !== text
   const ready = useMemo(() => {
+    if (stale) return false
     if (!parsed || parsed.n_columns < columnsNeeded) return false
     if (settings.coherence_source === 'FIXED_KAPPA' && !settings.kappa_fixed) return false
     return true
-  }, [parsed, columnsNeeded, settings])
+  }, [stale, parsed, columnsNeeded, settings])
 
   async function runAnalysis() {
     if (!parsed) return
@@ -165,11 +189,13 @@ export default function App() {
             결과 CSV 내려받기
           </button>
         )}
-        {!ready && parsed && (
+        {!ready && (parsed || stale) && (
           <span className="muted small">
-            {settings.coherence_source === 'FIXED_KAPPA' && !settings.kappa_fixed
-              ? 'κ 값을 입력해 주세요.'
-              : `열이 ${columnsNeeded}개 필요합니다.`}
+            {stale
+              ? '데이터를 읽는 중…'
+              : settings.coherence_source === 'FIXED_KAPPA' && !settings.kappa_fixed
+                ? 'κ 값을 입력해 주세요.'
+                : `열이 ${columnsNeeded}개 필요합니다.`}
           </span>
         )}
       </div>

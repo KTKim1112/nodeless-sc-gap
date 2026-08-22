@@ -7,6 +7,13 @@ export default defineConfig({
 
   server: {
     port: 5173,
+    // Bind the IPv4 loopback explicitly. Left to itself this version of Vite
+    // listens on ::1 only, so http://127.0.0.1:5173 is refused outright and
+    // whether http://localhost:5173 works depends on how the browser resolves
+    // it. Loopback rather than 0.0.0.0 keeps the dev server off the network,
+    // which QA-006 wants.
+    host: '127.0.0.1',
+    strictPort: true,
     // During development the page is served from here and the API from the
     // Python process on 8000. Proxying /api makes them look like one origin to
     // the browser, so there is no CORS configuration to get wrong, and the

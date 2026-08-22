@@ -64,7 +64,17 @@ Then open `http://localhost:8000`.
 
 ## Acceptance walkthrough
 
-Run in order. Each step names the scenario or requirement it demonstrates.
+**Most of this is now executed rather than performed.**
+`cd frontend && npm run test:e2e` starts both servers and runs
+`e2e/acceptance.spec.ts`, which covers steps 1 to 5 and 7 to 9 below. A
+scenario that is only ever checked by hand is a scenario that quietly stops
+being checked, and these are the ones that decide whether the feature is done.
+
+`npm run shots` captures the same states as images under `e2e/.shots/` for
+review by eye, which is how the Korean wording and the layout get judged.
+
+The prose below remains as the description of what each step is for, and steps
+6 and 10 are still manual.
 
 ### 1. The tool works before you have data (AS-9, FR-028)
 
