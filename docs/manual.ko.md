@@ -36,7 +36,7 @@
 
 ## 00. 이 문서에 대하여
 
-2026년 8월 22일과 23일 이틀 동안, 초전도 박막의 자기장 없는 상태에서 측정한
+2026년 8월 22일과 23일에 걸쳐, 초전도 박막의 자기장 없는 상태에서 측정한
 임계전류밀도 `Jc(T)`로부터 런던 침투깊이 `λ(0)`와 초전도 에너지 갭 `Δ(0)`를
 뽑아내는 웹 애플리케이션 하나를 만들었습니다.
 
@@ -68,6 +68,16 @@ for thin-film superconductors*, **Nature Communications 6**, 7820 (2015)의
 - `이런 글씨`는 파일 이름, 폴더 이름, 명령어, 변수 이름입니다.
 - 모든 명령은 **Windows 11 + PowerShell** 기준입니다. macOS나 Linux에서는
   경로 구분자가 `\`가 아니라 `/`이고, 가상환경 활성화 경로가 다릅니다.
+- **PowerShell이 두 가지입니다.** 시작 메뉴의 "Windows PowerShell"은 5.1이고,
+  "PowerShell 7"은 따로 설치해야 하는 최신판입니다. 이 문서의 명령은 양쪽에서
+  모두 되도록 적었습니다 — `&&`처럼 5.1에서 안 되는 문법은 피했습니다.
+
+> **바로 따라 해 보려는 분께**
+>
+> 처음 재현하는 분이 실제로 막힌 지점은 맨 앞이었습니다. "터미널은 열었는데
+> AI와의 대화를 어떻게 시작하지?" 그 답만 먼저 보시려면
+> [3.4절](#34-첫-세션-시작하기--새-프로젝트에서-대화가-열릴-때까지)로 가십시오.
+> 설치가 아직이면 [2장](#02-준비물--무엇을-왜-설치하는가)이 먼저입니다.
 
 > **이 문서의 정직성 원칙**
 >
@@ -189,20 +199,31 @@ npm --version    # 11.17.0
 사람은 무엇을 왜 만들지 정하고 결과를 판정했습니다.
 
 ```powershell
-# 방법 1 — npm으로 (Node가 이미 있으므로 가장 간단)
-npm install -g @anthropic-ai/claude-code
+# 이 컴퓨터에 실제로 깔린 방식 — 공식 설치 프로그램
+# https://claude.com/claude-code 의 안내를 따르면
+# C:\Users\<이름>\.local\bin\claude.exe 에 설치됩니다.
 
 # 확인
-claude --version   # 2.1.241 (Claude Code)
+claude --version
 
 # 프로젝트 폴더로 이동한 뒤 실행
 cd C:\Users\kgtak\projects\nodeless-sc-gap
 claude
 ```
 
-처음 실행하면 브라우저가 열리면서 Anthropic 계정 로그인을 요구합니다. Claude
-Pro/Max 구독 또는 API 크레딧이 있어야 합니다. 로그인은 최초 1회이고, 이후에는
-바로 대화가 시작됩니다.
+> **버전 번호가 문서와 다를 것입니다**
+>
+> Claude Code는 스스로 갱신됩니다. 이 문서를 처음 쓸 때 2.1.241이었고 며칠 뒤
+> 2.1.245였습니다. 숫자가 다르다고 잘못된 게 아닙니다.
+>
+> Node가 이미 있으면 `npm install -g @anthropic-ai/claude-code`로도 깔 수
+> 있습니다. **다만 이 프로젝트에서 쓴 것은 그쪽이 아닙니다** — 확인해 보니
+> npm 전역 폴더에는 들어 있지 않고 `.local\bin`에만 있었습니다. 둘 중 하나만
+> 쓰십시오. 둘 다 깔면 어느 쪽이 실행되는지가 `PATH` 순서에 달리게 됩니다.
+> 지금 무엇이 실행되는지는 `(Get-Command claude).Source`로 확인합니다.
+
+첫 실행에서 어떤 화면이 나오고 어떻게 나가는지는
+[3.4절](#34-첫-세션-시작하기--새-프로젝트에서-대화가-열릴-때까지)에 있습니다.
 
 #### ⑤ Orca — 에이전트 여러 개를 관리하는 창
 
@@ -340,6 +361,69 @@ Code가 했고, 만들어진 파일 어디에도 Orca에 의존하는 부분이 
 >
 > 주기적으로 `git worktree list`와 `git branch`를 확인해 모르는 항목이 있으면
 > 정리하십시오.
+
+### 3.4 첫 세션 시작하기 — 새 프로젝트에서 대화가 열릴 때까지
+
+> 이 절은 **이 문서를 보고 처음 재현하던 사람이 실제로 여기서 막혀서** 나중에
+> 추가한 것입니다. 나머지 내용이 전부 "그 다음"을 다루고 있었습니다.
+
+**먼저 알아 둘 것: 대화창이 따로 뜨지 않습니다.** 채팅 프로그램처럼 새 창이
+열리는 게 아니라, **지금 명령을 치고 있는 그 터미널이 그대로 대화창이 됩니다.**
+`claude`를 치면 잠시 뒤 입력줄이 나타나고, 거기에 한국어로 말을 걸면 됩니다.
+이걸 모르면 "창이 안 뜨는데?" 하고 멈추게 됩니다.
+
+#### 폴더를 새로 만드는 경우
+
+```powershell
+mkdir C:\Users\kgtak\projects\my-new-project
+cd C:\Users\kgtak\projects\my-new-project
+git init
+claude
+```
+
+폴더 이름은 [2.3절의 경로 규칙](#23-프로젝트를-놓을-자리--실제로-사고가-난-부분)을
+지켜야 합니다 — **한글 없이, 공백 없이, OneDrive 밖.** 예시가 영문 소문자에
+붙임표인 것은 그 때문입니다.
+
+#### 이미 파일이 들어 있는 폴더에서 시작하는 경우
+
+기존 코드나 초안 문서를 놓아 둔 폴더에서 시작하는 쪽이 오히려 흔합니다. 이때는
+**`claude`를 치기 전에 지금 상태를 먼저 박제해 두십시오.**
+
+```powershell
+cd C:\Users\kgtak\projects\my-new-project
+git init
+git add -A
+git commit -m "Existing files before the rebuild begins"
+claude
+```
+
+세 번째 줄까지 끝내면 지금 이 상태로 **언제든 정확히 되돌아올 수 있습니다.**
+그러지 않으면 AI가 파일 스무 개를 한 번에 고쳤을 때 돌아갈 곳이 없습니다.
+
+> **`git init`을 건너뛰면 Orca도 막힙니다**
+>
+> Orca는 에이전트마다 **git worktree**를 만들어 작업을 격리합니다(3.2절).
+> worktree는 git 저장소에만 만들 수 있으므로, 저장소가 아닌 폴더는 Orca가 받아
+> 주지 않습니다. Orca를 쓰든 안 쓰든 `git init`이 먼저입니다.
+
+#### 처음 실행하면 무엇이 보이나
+
+1. **최초 1회만** 브라우저가 열리며 Anthropic 계정 로그인을 요구합니다. Claude
+   Pro/Max 구독이나 API 크레딧이 필요합니다.
+2. 로그인 뒤 터미널에 입력줄이 나타납니다. 이제 한국어로 말을 걸면 됩니다.
+3. 첫마디로는 [8장 1단계의 헌법 프롬프트](#1단계--헌법)가 적당합니다.
+
+#### 나가기와 이어 하기
+
+| 하고 싶은 것 | 방법 |
+| --- | --- |
+| 대화 끝내기 | `/exit`, 또는 Ctrl+C 두 번 |
+| 다음에 이어서 | `claude --continue` (직전 대화), `claude --resume` (골라서) |
+| 셸 명령을 직접 실행 | 입력줄에서 `!` 뒤에 명령 — 예: `!git status` |
+
+`!`는 특히 유용합니다. `gcloud auth login`처럼 사람이 직접 답해야 하는 명령을
+그 자리에서 돌리고, 결과가 대화에 그대로 들어옵니다.
 
 ---
 
@@ -874,7 +958,7 @@ nodeless-sc-gap/
 ├── docs/                     ★ 교육 자료 (헌법 VIII 예외)
 │   ├── manual.ko.md          이 문서
 │   ├── manual.en.md          같은 내용의 영어판
-│   └── images/               매뉴얼용 화면 캡처 8장
+│   └── images/               매뉴얼용 화면 캡처 9장
 │
 ├── specs/001-jc-to-gap/      ★ 사양 문서 — 코드보다 먼저 쓰였음
 │   ├── spec.md               무엇을·왜 (기술 이름 없음)
@@ -910,7 +994,7 @@ nodeless-sc-gap/
 ├── frontend/
 │   ├── src/
 │   │   ├── App.tsx           화면 전체 흐름
-│   │   ├── components/       입력·설정·표·그래프·진단 등 8개
+│   │   ├── components/       입력·설정·표·그래프·진단 등 9개
 │   │   ├── api/generated.ts  ★ 서버에서 자동 생성. 손으로 고치지 않음
 │   │   └── errorMessages.ts  ★ 화면에 나가는 한국어 문장
 │   └── e2e/                  브라우저 자동 테스트 + 스크린샷
@@ -1083,12 +1167,23 @@ npm run shots
 ### 0일차 — 환경
 
 ```powershell
-git --version && python --version && node --version && claude --version
-mkdir C:\Users\kgtak\projects\새-프로젝트-이름
-cd C:\Users\kgtak\projects\새-프로젝트-이름
+# 네 줄로 나눈 이유: '&&'는 Windows PowerShell 5.1에서 문법 오류입니다.
+# 시작 메뉴의 "Windows PowerShell"이 5.1이고, "PowerShell 7"은 별도 설치입니다.
+git --version
+python --version
+node --version
+claude --version
+
+# 폴더 이름은 한글 없이, 공백 없이, OneDrive 밖 (2.3절)
+mkdir C:\Users\kgtak\projects\my-new-project
+cd C:\Users\kgtak\projects\my-new-project
 git init
 claude
 ```
+
+이미 파일이 들어 있는 폴더에서 시작한다면 `git init` 다음에 `git add -A`와
+`git commit`을 먼저 하십시오. 자세한 것은
+[3.4절](#34-첫-세션-시작하기--새-프로젝트에서-대화가-열릴-때까지)에 있습니다.
 
 ### 1단계 — 헌법
 

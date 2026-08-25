@@ -36,7 +36,7 @@ Written so that someone starting from the same place can follow it.
 
 ## 00. About this document
 
-Over two days, 22 and 23 August 2026, a web application was built that extracts
+Over 22 and 23 August 2026, a web application was built that extracts
 the London penetration depth `lambda(0)` and the superconducting energy gap
 `Delta(0)` from the self-field critical current density `Jc(T)` of a thin film.
 
@@ -71,6 +71,18 @@ current for thin-film superconductors*, **Nature Communications 6**, 7820
 - Every command assumes **Windows 11 with PowerShell**. On macOS or Linux the
   path separator is `/` rather than `\`, and the virtual-environment activation
   path differs.
+- **There are two PowerShells.** The Start menu's "Windows PowerShell" is 5.1;
+  "PowerShell 7" is a separate, newer install. The commands here are written to
+  work in both — syntax 5.1 rejects, such as `&&`, is avoided.
+
+> **If you are here to follow along right now**
+>
+> The place the first person to reproduce this actually got stuck was the very
+> beginning: the terminal was open, and it was not obvious how to start the
+> conversation at all. For that answer alone, go to
+> [section 3.4](#34-starting-the-first-session--from-an-empty-folder-to-a-conversation).
+> If nothing is installed yet, [section 02](#02-prerequisites--what-to-install-and-why)
+> comes first.
 
 > **The honesty rule of this document**
 >
@@ -195,18 +207,30 @@ written by Claude Code; the human decided what was being built and judged the
 results.
 
 ```powershell
-# Simplest route, since Node is already installed
-npm install -g @anthropic-ai/claude-code
+# What this machine actually has: the official installer, from
+# https://claude.com/claude-code . It lands in
+# C:\Users\<name>\.local\bin\claude.exe
 
-claude --version   # 2.1.241 (Claude Code)
+claude --version
 
 # Then, from the project folder
 cd C:\Users\kgtak\projects\nodeless-sc-gap
 claude
 ```
 
-The first run opens a browser to sign in to an Anthropic account. A Claude
-Pro/Max subscription or API credit is required. Sign-in happens once.
+> **The version number will not match this document**
+>
+> Claude Code updates itself. It was 2.1.241 when this was first written and
+> 2.1.245 a few days later. A different number is not a sign of anything wrong.
+>
+> With Node installed, `npm install -g @anthropic-ai/claude-code` works too.
+> **It is not what was used here**, though: checked, and the npm global folder
+> holds no copy — only `.local\bin` does. Use one or the other. With both
+> installed, which one runs depends on the order of `PATH`, and
+> `(Get-Command claude).Source` is what says which it currently is.
+
+What the first run looks like, and how to leave and resume, is in
+[section 3.4](#34-starting-the-first-session--from-an-empty-folder-to-a-conversation).
 
 #### 5. Orca — a window for managing several agents
 
@@ -350,6 +374,74 @@ it means opening a terminal and typing `claude`.
 >
 > Check `git worktree list` and `git branch` occasionally and clear anything
 > unfamiliar.
+
+### 3.4 Starting the first session — from an empty folder to a conversation
+
+> This section was added later, because **the first person to reproduce the
+> method from this document got stuck exactly here.** Everything else in it
+> covered what comes afterwards.
+
+**First, the thing nobody says: no separate window opens.** Unlike a chat
+application, **the terminal you are already typing in becomes the conversation.**
+Type `claude`, wait a moment, and a prompt appears; talk to it in ordinary
+prose. Not knowing this is enough to stop someone, waiting for a window that is
+never going to appear.
+
+#### Starting a folder from scratch
+
+```powershell
+mkdir C:\Users\kgtak\projects\my-new-project
+cd C:\Users\kgtak\projects\my-new-project
+git init
+claude
+```
+
+The folder name has to obey the
+[path rules of section 2.3](#23-where-to-put-the-project--this-actually-went-wrong):
+**no non-ASCII characters, no spaces, outside OneDrive.** That is why the
+example is lowercase ASCII with hyphens.
+
+#### Starting in a folder that already has files
+
+Starting where some code or a draft document already sits is the more common
+case. Here, **freeze the current state before typing `claude`.**
+
+```powershell
+cd C:\Users\kgtak\projects\my-new-project
+git init
+git add -A
+git commit -m "Existing files before the rebuild begins"
+claude
+```
+
+After the third line this exact state can be returned to at any point.
+Without it, there is nowhere to go back to when the agent changes twenty files
+at once.
+
+> **Skipping `git init` also blocks Orca**
+>
+> Orca isolates each agent in a **git worktree** (section 3.2), and a worktree
+> can only be made inside a git repository — so a plain folder is not something
+> Orca will take. Whether or not Orca is used, `git init` comes first.
+
+#### What the first run looks like
+
+1. **Once only**, a browser opens to sign in to an Anthropic account. A Claude
+   Pro/Max subscription or API credit is required.
+2. A prompt appears in the terminal. Talk to it.
+3. A good opening line is the
+   [constitution prompt from step 1 of section 08](#step-1--the-constitution).
+
+#### Leaving, and coming back
+
+| To | Do |
+| --- | --- |
+| End the conversation | `/exit`, or Ctrl+C twice |
+| Continue later | `claude --continue` (the last one), `claude --resume` (pick one) |
+| Run a shell command yourself | `!` then the command at the prompt — e.g. `!git status` |
+
+The last one earns its place: a command only a human can answer, such as an
+interactive login, runs right there and its output lands in the conversation.
 
 ---
 
@@ -917,7 +1009,7 @@ nodeless-sc-gap/
 ├── docs/                     teaching material (article VIII exemption)
 │   ├── manual.en.md          this document
 │   ├── manual.ko.md          the Korean version
-│   └── images/               eight screenshots for the manual
+│   └── images/               nine screenshots for the manual
 │
 ├── specs/001-jc-to-gap/      the specification -- written before the code
 │   ├── spec.md               what and why (no technology named)
@@ -1134,12 +1226,24 @@ To repeat the method on a new subject, in this order. Each step includes
 ### Day 0 — the environment
 
 ```powershell
-git --version && python --version && node --version && claude --version
-mkdir C:\Users\kgtak\projects\new-project-name
-cd C:\Users\kgtak\projects\new-project-name
+# Four lines rather than one: '&&' is a syntax error in Windows PowerShell 5.1,
+# which is what the Start menu's "Windows PowerShell" is. "PowerShell 7" is a
+# separate install.
+git --version
+python --version
+node --version
+claude --version
+
+# No non-ASCII characters, no spaces, outside OneDrive (section 2.3)
+mkdir C:\Users\kgtak\projects\my-new-project
+cd C:\Users\kgtak\projects\my-new-project
 git init
 claude
 ```
+
+Starting in a folder that already holds files? Run `git add -A` and
+`git commit` after `git init`, before anything else — see
+[section 3.4](#34-starting-the-first-session--from-an-empty-folder-to-a-conversation).
 
 ### Step 1 — the constitution
 
@@ -1284,7 +1388,7 @@ for one project only.
 **test** — "this input must produce this result", written as code. `pytest`
 runs them all and reports.
 
-**component** — one part of the page. This project has eight.
+**component** -- one part of the page. This project has nine.
 
 **type** — a declaration that a value is a number, a string, or an object of a
 given shape. TypeScript checks these at compile time, so a mismatch between
@@ -1313,7 +1417,7 @@ claude --resume                          # continue an earlier one
 
 # ---- verifying ----
 cd backend; .\.venv\Scripts\python.exe -m pytest -q     # 176 tests
-cd frontend; npm run test:e2e                           # 24 tests
+cd frontend; npm run test:e2e                           # 25 tests
 cd frontend; npm run shots                              # screenshots
 
 # ---- building something to give away ----
