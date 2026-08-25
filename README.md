@@ -128,6 +128,7 @@ the specification -- the quadrature rule, the residual definition, the
 model-comparison criterion -- the specification was corrected first and the
 reason recorded. `git log` is the argument for each.
 
-`docs/manual.ko.md` narrates the whole of it -- what was installed, what each
-phase did, and what came out -- for a reader with no programming background. It
-is in Korean, which constitution VIII permits under `docs/` alone.
+`docs/manual.en.md` narrates the whole of it -- what was installed, what each
+phase did, and what came out -- for a reader with no programming background.
+`docs/manual.ko.md` is the same document in Korean, which constitution VIII
+permits under `docs/` alone.

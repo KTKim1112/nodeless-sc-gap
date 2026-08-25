@@ -13,7 +13,7 @@
 | 커밋 | 10개 |
 
 > 이 문서는 헌법 VIII조의 예외 조항(1.1.0)에 따라 한국어로 쓰였습니다.
-> 같은 내용의 웹 페이지 판은 `manual.ko.html`입니다.
+> 같은 내용의 영어판은 [`manual.en.md`](manual.en.md)입니다.
 
 ---
 
@@ -769,7 +769,7 @@ nodeless-sc-gap/
 │
 ├── docs/                     ★ 교육 자료 (헌법 VIII 예외)
 │   ├── manual.ko.md          이 문서
-│   ├── manual.ko.html        같은 내용의 웹 페이지 판
+│   ├── manual.en.md          같은 내용의 영어판
 │   └── images/               매뉴얼용 화면 캡처 8장
 │
 ├── specs/001-jc-to-gap/      ★ 사양 문서 — 코드보다 먼저 쓰였음
