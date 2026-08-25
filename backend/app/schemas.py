@@ -269,6 +269,11 @@ class FitResultOut(Model):
     rho_s_measured: list[float] = Field(
         description="lambda0^2 / lambda^2 at each measured point, for plotting"
     )
+    jc_model_A_per_m2: list[float] = Field(
+        description="equation (1) at the fitted parameters, at each measured "
+                    "temperature; on the measurements rather than on a dense "
+                    "grid because xi is known only there (FR-026a)"
+    )
     n_points: int
     n_free_parameters: int
     n_function_evaluations: int
@@ -290,6 +295,7 @@ class FitResultOut(Model):
             chi2_reduced=fit.chi2_reduced,
             residuals=_list(fit.residuals),
             rho_s_measured=_list(fit.rho_s_measured),
+            jc_model_A_per_m2=_list(fit.jc_model),
             n_points=fit.n_points,
             n_free_parameters=fit.n_free_parameters,
             n_function_evaluations=fit.n_function_evaluations,

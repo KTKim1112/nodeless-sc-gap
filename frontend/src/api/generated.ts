@@ -390,6 +390,11 @@ export interface components {
              * @description lambda0^2 / lambda^2 at each measured point, for plotting
              */
             rho_s_measured: number[];
+            /**
+             * Jc Model A Per M2
+             * @description equation (1) at the fitted parameters, at each measured temperature; on the measurements rather than on a dense grid because xi is known only there (FR-026a)
+             */
+            jc_model_A_per_m2: number[];
             /** N Points */
             n_points: number;
             /** N Free Parameters */

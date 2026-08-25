@@ -17,7 +17,7 @@ interface Props {
   result: AnalyzeResponse
 }
 
-type Tab = 'rho_s' | 'lambda' | 'residuals'
+type Tab = 'rho_s' | 'lambda' | 'jc' | 'residuals'
 
 const TABS: { id: Tab; label: string; hint: string }[] = [
   {
@@ -29,6 +29,11 @@ const TABS: { id: Tab; label: string; hint: string }[] = [
     id: 'lambda',
     label: '침투깊이 λ(T)',
     hint: 'Tc 근처에서 발산합니다. 세로축이 로그인 이유입니다.',
+  },
+  {
+    id: 'jc',
+    label: '임계전류밀도 Jc(T)',
+    hint: '측정한 값 그 자체와, 피팅된 값이 예측하는 값입니다. 다른 두 그래프와 달리 측정한 온도에서만 그려집니다 — 식 (1)에는 λ 외에 ξ도 필요한데, ξ는 측정점 사이에서는 알 수 없기 때문입니다.',
   },
   {
     id: 'residuals',
@@ -82,6 +87,36 @@ export function Charts({ result }: Props) {
     },
   ], [table, curve, modelName])
 
+  // The model here is a polyline through the measured temperatures rather than
+  // a dense curve (FR-026a), so unlike the two plots above it has to be drawn
+  // in temperature order -- the points arrive in the order they were typed,
+  // and Plotly would join them in that order. Sorting is presentation: both
+  // arrays are computed in the backend and only rearranged here.
+  const jcData = useMemo<Data[]>(() => {
+    const byTemperature = table.temperature_K
+      .map((_, i) => i)
+      .sort((a, b) => table.temperature_K[a] - table.temperature_K[b])
+    return [
+      {
+        x: table.temperature_K,
+        y: table.jc_A_per_m2,
+        mode: 'markers',
+        type: 'scatter',
+        name: '측정',
+        marker,
+      },
+      {
+        x: byTemperature.map((i) => table.temperature_K[i]),
+        y: byTemperature.map((i) => fit.jc_model_A_per_m2[i]),
+        mode: 'lines+markers',
+        type: 'scatter',
+        name: modelName,
+        line: { width: 2 },
+        marker: { size: 4 },
+      },
+    ]
+  }, [table, fit, modelName])
+
   const residualData = useMemo<Data[]>(() => [
     {
       x: table.temperature_K,
@@ -132,6 +167,24 @@ export function Charts({ result }: Props) {
           layout={{
             ...shared,
             yaxis: { title: { text: 'λ [nm]' }, type: 'log' },
+          }}
+        />
+      )}
+
+      {tab === 'jc' && (
+        <Plot
+          filename="jc"
+          data={jcData}
+          layout={{
+            ...shared,
+            // exponentformat: Jc runs to ~1e10 A/m2, and Plotly's default
+            // labels that as "10B". Powers of ten instead, because a billion
+            // is a word with two meanings and this axis has a unit.
+            yaxis: {
+              title: { text: 'Jc [A/m²]' },
+              type: 'log',
+              exponentformat: 'power',
+            },
           }}
         />
       )}

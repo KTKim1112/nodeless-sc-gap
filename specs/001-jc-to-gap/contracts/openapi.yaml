@@ -475,6 +475,15 @@ components:
             lambda0^2 / lambda^2 at each measured point, in input order. What
             the data look like on a superfluid-density plot. Computed here
             rather than by the client because it needs the fitted lambda0.
+        jc_model_A_per_m2:
+          type: array
+          items: { type: number }
+          description: >
+            Equation (1) at the fitted parameters, at each measured
+            temperature, in input order (FR-026a). On the measurements rather
+            than on the SuperfluidCurve grid because equation (1) needs xi as
+            well as lambda, and outside FIXED_KAPPA the coherence length is
+            known only where a measurement supplied it.
         n_points:            { type: integer }
         n_free_parameters:   { type: integer }
 

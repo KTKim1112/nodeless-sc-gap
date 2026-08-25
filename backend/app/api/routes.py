@@ -117,19 +117,23 @@ def job_status(job_id: str) -> schemas.JobStatus:
 #: a number without one is not a result (QA-004). Defined here rather than in
 #: the frontend so that units and names exist in exactly one place.
 #:
-#: The first group is read off the lambda table, the second off the fit. Both
-#: hold one value per measured point, in the order the points were given, so
-#: they zip into a single row.
-_TABLE_COLUMNS = [
-    ("T_K", "temperature_K"),
-    ("Jc_A_per_m2", "jc_A_per_m2"),
-    ("xi_nm", "xi_nm"),
-    ("lambda_nm", "lambda_nm"),
-    ("kappa", "kappa"),
-]
-_FIT_COLUMNS = [
-    ("rho_s_measured", "rho_s_measured"),
-    ("fit_residual", "residuals"),
+#: Each entry names the header, which part of the response holds the column,
+#: and the attribute. Every one of them holds one value per measured point in
+#: the order the points were given, so they zip into a single row whichever
+#: half of the response they came from.
+#:
+#: Ordered for the reader rather than by origin: the measured and predicted
+#: critical current densities are adjacent because plotting one against the
+#: other is the reason the second exists (FR-026a).
+_ROW_COLUMNS = [
+    ("T_K", "lambda_table", "temperature_K"),
+    ("Jc_A_per_m2", "lambda_table", "jc_A_per_m2"),
+    ("Jc_model_A_per_m2", "fit", "jc_model_A_per_m2"),
+    ("xi_nm", "lambda_table", "xi_nm"),
+    ("lambda_nm", "lambda_table", "lambda_nm"),
+    ("kappa", "lambda_table", "kappa"),
+    ("rho_s_measured", "fit", "rho_s_measured"),
+    ("fit_residual", "fit", "residuals"),
 ]
 
 #: The fitted curve, on its own grid. Suffixed `_model` throughout so that a
@@ -153,11 +157,10 @@ def export_csv(result: schemas.AnalyzeResponse) -> Response:
     _write_conditions(buffer, result)
 
     writer = csv.writer(buffer, lineterminator="\n")
-    writer.writerow([header for header, _ in _TABLE_COLUMNS + _FIT_COLUMNS])
-    columns = (
-        [getattr(result.lambda_table, name) for _, name in _TABLE_COLUMNS]
-        + [getattr(result.fit, name) for _, name in _FIT_COLUMNS]
-    )
+    writer.writerow([header for header, _, _ in _ROW_COLUMNS])
+    columns = [
+        getattr(getattr(result, source), name) for _, source, name in _ROW_COLUMNS
+    ]
     for row in zip(*columns):
         writer.writerow([f"{value:.10g}" for value in row])
 

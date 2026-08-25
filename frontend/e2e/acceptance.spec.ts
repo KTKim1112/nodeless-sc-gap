@@ -215,9 +215,21 @@ test('the results can be downloaded as a table with units in the headers', async
   for await (const chunk of stream) chunks.push(chunk as Buffer)
   const csv = Buffer.concat(chunks).toString('utf8')
 
-  expect(csv).toContain('T_K,Jc_A_per_m2,xi_nm,lambda_nm,kappa,rho_s_measured,fit_residual')
+  expect(csv).toContain(
+    'T_K,Jc_A_per_m2,Jc_model_A_per_m2,xi_nm,lambda_nm,kappa,rho_s_measured,fit_residual')
   expect(csv).toContain('SELF_FIELD_TRANSPORT_REQUIRED')
   expect(csv).toContain('lambda(0) [nm]')
+
+  // FR-026a. The example is noiseless synthetic data generated from equation
+  // (1), so the prediction has to land on the measurement it was fitted to.
+  // A wrong column order, or a prediction built from someone else's xi, moves
+  // this far enough to fail while still looking like a plausible number.
+  const rows = csv.split('\n').filter(l => l && !l.startsWith('#') && !l.startsWith('T_K'))
+  for (const row of rows) {
+    const [, jc, jcModel] = row.split(',').map(Number)
+    expect(jcModel).toBeGreaterThan(0)
+    expect(Math.abs(jcModel / jc - 1)).toBeLessThan(0.02)
+  }
 })
 
 // --- FR-027a: the fitted curve as numbers ------------------------------------
@@ -260,21 +272,38 @@ test('the fitted curve can be downloaded and starts on the reported intercept',
 
 // --- FR-026, FR-019: the plots ----------------------------------------------
 
-test('all three plots draw', async ({ page }) => {
+test('all four plots draw', async ({ page }) => {
   await loadExample(page, 'nbti_like')
   await analyse(page)
   const charts = page.locator('section.card').filter({
     has: page.getByRole('heading', { name: '그래프', exact: true }),
   })
 
-  for (const tab of ['초전도 밀도 ρs(T)', '침투깊이 λ(T)', '잔차']) {
+  for (const tab of ['초전도 밀도 ρs(T)', '침투깊이 λ(T)', '임계전류밀도 Jc(T)', '잔차']) {
     await charts.getByRole('tab', { name: tab }).click()
     await expect(charts.locator('.js-plotly-plot')).toBeVisible()
-    // Two traces on the first two tabs (data and model), one on residuals.
+    // Two traces on all but the residual tab (data and model), one there.
     const traces = charts.locator('.js-plotly-plot .scatterlayer .trace')
     await expect(traces.first()).toBeVisible()
   }
 })
+
+test('the Jc plot shows the measurement and the prediction together',
+  async ({ page }) => {
+    await loadExample(page, 'nbti_like')
+    await analyse(page)
+    const charts = page.locator('section.card').filter({
+      has: page.getByRole('heading', { name: '그래프', exact: true }),
+    })
+    await charts.getByRole('tab', { name: '임계전류밀도 Jc(T)' }).click()
+
+    await expect(charts.locator('.js-plotly-plot .scatterlayer .trace')).toHaveCount(2)
+    await expect(charts.getByText('측정', { exact: true })).toBeVisible()
+
+    // FR-026a: the hint has to say why this plot is not a smooth curve, since
+    // the two tabs beside it are and the difference is not self-explanatory.
+    await expect(charts.getByText(/측정한 온도에서만/)).toBeVisible()
+  })
 
 test('the plot offers a PNG download', async ({ page }) => {
   await loadExample(page, 'nbti_like')

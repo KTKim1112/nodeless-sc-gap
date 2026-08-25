@@ -64,10 +64,14 @@ class _Problem:
     temperature_K: FloatArray
     gap_model: GapModel
     tc_fixed_K: float | None
-    # route A
+    # route A fits this
     lambda_data: FloatArray | None = None
-    # route B
+    # route B fits this
     jc_data: FloatArray | None = None
+    #: How equation (1) gets its coherence length. Route B needs these to form
+    #: its residual; route A supplies them too, because the reported jc_model
+    #: is wanted whichever route produced the parameters, and one expression
+    #: for both is what keeps the two consistent.
     xi: FloatArray | None = None
     kappa_fixed: float | None = None
     #: The measured lambda(T), for reporting rho_s_measured. Route A fits it, so
@@ -114,6 +118,22 @@ def _bounds(problem: _Problem, t_max: float) -> tuple[np.ndarray, np.ndarray]:
 
 # --- residuals ---------------------------------------------------------------
 
+def _predicted_jc(
+    lambda0: float, delta0: float, tc: float, problem: _Problem
+) -> FloatArray:
+    """Equation (1) at the given parameters, on the measured temperatures.
+
+    The coherence length is the model's own under a fixed kappa, where the fit
+    determines it, and the supplied one otherwise, where it is data. Route B's
+    residual and the reported jc_model both come through here, so they cannot
+    drift apart (FR-026a, data-model.md `FitResult`).
+    """
+    lam = lambda_of_T(problem.temperature_K, lambda0, delta0, tc, problem.gap_model)
+    xi = lam / problem.kappa_fixed if problem.kappa_fixed is not None else problem.xi
+    with np.errstate(divide="ignore", invalid="ignore"):
+        return jc_model(lam, xi)
+
+
 def _residuals(p: np.ndarray, problem: _Problem) -> FloatArray:
     lambda0, delta0, tc = _unpack(p, problem)
     t = problem.temperature_K
@@ -134,10 +154,7 @@ def _residuals(p: np.ndarray, problem: _Problem) -> FloatArray:
     # Route B. The logarithm is essential: Jc spans orders of magnitude across
     # the temperature range, and a linear residual would let the coldest point
     # decide the fit on its own.
-    lam = lambda_of_T(t, lambda0, delta0, tc, problem.gap_model)
-    xi = (lam / problem.kappa_fixed if problem.kappa_fixed is not None else problem.xi)
-    with np.errstate(divide="ignore", invalid="ignore"):
-        predicted = jc_model(lam, xi)
+    predicted = _predicted_jc(lambda0, delta0, tc, problem)
     # Near Tc the model Jc collapses towards zero; guard the logarithm so the
     # optimiser sees a large finite penalty instead of a NaN it cannot use.
     predicted = np.where(np.isfinite(predicted) & (predicted > 0.0), predicted, 1e-300)
@@ -217,6 +234,14 @@ def _assemble(
         else np.empty(0, dtype=float)
     )
 
+    # Unguarded, unlike the copy inside the residual: that one substitutes a
+    # finite penalty so the optimiser has something to work with, and this one
+    # is reported, so a value the model cannot produce must not be disguised
+    # as one it can.
+    predicted_jc = np.asarray(
+        _predicted_jc(lambda0, delta0, tc, problem), dtype=float
+    )
+
     return FitResult(
         gap_model=problem.gap_model,
         fit_route=route,
@@ -231,6 +256,7 @@ def _assemble(
         chi2_reduced=chi2_reduced,
         residuals=np.asarray(result.fun, dtype=float),
         rho_s_measured=rho_s_measured,
+        jc_model=predicted_jc,
         n_points=n_points,
         n_free_parameters=n_free,
         converged=bool(result.success),
@@ -282,15 +308,34 @@ def _solve(problem: _Problem, route: FitRoute) -> FitResult:
 
 # --- public entry points -----------------------------------------------------
 
+def _model_xi_inputs(
+    settings: AnalysisSettings, table_xi: FloatArray
+) -> tuple[FloatArray | None, float | None]:
+    """What equation (1) should use for the coherence length, and from where.
+
+    Under a fixed kappa the table's `xi` is `lambda_data / kappa`, which is a
+    property of the measurement rather than of the model; the model's own is
+    `lambda_model / kappa`, so the parameter is passed instead of the column.
+    """
+    if settings.coherence_source is CoherenceSource.FIXED_KAPPA:
+        return None, settings.kappa_fixed
+    return table_xi, None
+
+
 def fit_route_a(
     table: LambdaTable, settings: AnalysisSettings, gap_model: GapModel | None = None
 ) -> FitResult:
     """Fit lambda(T) that has already been extracted point by point."""
+    xi, kappa_fixed = _model_xi_inputs(settings, table.xi)
     problem = _Problem(
         temperature_K=table.temperature_K,
         gap_model=gap_model or settings.gap_model,
         tc_fixed_K=settings.tc_fixed_K,
         lambda_data=table.lambda_,
+        # Not fitted here -- route A's residual is in lambda. Carried so that
+        # the reported jc_model exists for this route too.
+        xi=xi,
+        kappa_fixed=kappa_fixed,
         lambda_reference=table.lambda_,
     )
     return _solve(problem, FitRoute.TWO_STEP)

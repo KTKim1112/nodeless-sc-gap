@@ -125,7 +125,7 @@ def test_export_csv_is_self_describing(client, example_request):
 
     text = response.text
     # QA-004: every column carries its unit.
-    assert "T_K,Jc_A_per_m2,xi_nm,lambda_nm,kappa" in text
+    assert "T_K,Jc_A_per_m2,Jc_model_A_per_m2,xi_nm,lambda_nm,kappa" in text
     # Constitution VI: the assumptions travel with the numbers.
     assert "SELF_FIELD_TRANSPORT_REQUIRED" in text
     assert "lambda(0) [nm]" in text and "Delta(0) [meV]" in text
@@ -137,23 +137,29 @@ def test_export_csv_is_self_describing(client, example_request):
 def test_export_csv_carries_the_fit_view_of_each_point(client, example_request):
     """The per-measurement table reports the fit at the measured points too.
 
-    rho_s_measured and the residual are one value per measurement, in the same
-    order as the inversion, so they belong in this table rather than in a
-    second one. If that ever stops being true the zip in export_csv would
+    rho_s_measured, jc_model and the residual are one value per measurement, in
+    the same order as the inversion, so they belong in this table rather than
+    in a second one. If that ever stops being true the zip in export_csv would
     silently truncate to the shorter of the two, so assert the width.
+
+    The measured and predicted Jc are asserted to be adjacent, because the
+    reason the second column exists is to be plotted against the first
+    (FR-026a) and a spreadsheet makes that harder the further apart they sit.
     """
     analysis = client.post("/api/analyze", json=example_request).json()
     text = client.post("/api/export/csv", json=analysis).text
 
     header = next(line for line in text.splitlines() if line.startswith("T_K"))
-    assert header == "T_K,Jc_A_per_m2,xi_nm,lambda_nm,kappa,rho_s_measured,fit_residual"
+    assert header == ("T_K,Jc_A_per_m2,Jc_model_A_per_m2,xi_nm,lambda_nm,kappa,"
+                      "rho_s_measured,fit_residual")
 
     rows = [line.split(",") for line in text.splitlines()
             if line and not line.startswith("#") and not line.startswith("T_K")]
     assert len(rows) == len(analysis["fit"]["residuals"])
-    assert all(len(row) == 7 for row in rows)
-    assert float(rows[0][5]) == pytest.approx(analysis["fit"]["rho_s_measured"][0])
-    assert float(rows[0][6]) == pytest.approx(analysis["fit"]["residuals"][0])
+    assert all(len(row) == 8 for row in rows)
+    assert float(rows[0][2]) == pytest.approx(analysis["fit"]["jc_model_A_per_m2"][0])
+    assert float(rows[0][6]) == pytest.approx(analysis["fit"]["rho_s_measured"][0])
+    assert float(rows[0][7]) == pytest.approx(analysis["fit"]["residuals"][0])
 
 
 def test_export_curve_is_the_curve_that_was_plotted(client, example_request):

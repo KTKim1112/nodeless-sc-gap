@@ -289,6 +289,59 @@ import absolute.
 
 ---
 
+## Phase 10 — The critical current density the fit predicts
+
+A plot and a column, added after the tool was already in use: the two existing
+plots show what the fit did to the derived quantities, and nothing showed it
+against the measurement itself. FR-026a, and an extension to FR-027.
+
+| Id | Task | Depends on |
+| --- | --- | --- |
+| T1001 | [done] spec: FR-026a, with the reason the curve is not dense; FR-027 gains the predicted column | — |
+| T1002 | [done] `data-model.md`: `FitResult.jc_model`, and which `xi` each coherence source contributes | T1001 |
+| T1003 | [done] `core/fitting.py`: `_predicted_jc`, one call site for route B's residual and for the reported value | T1002 |
+| T1004 | [done] route A carries `xi` and `kappa_fixed` too, so the prediction exists whichever route ran | T1003 |
+| T1005 | [done] `types.py`, `schemas.py`, `contracts/openapi.yaml`, and regenerated frontend types | T1003 |
+| T1006 | [done] `routes.py`: one `_ROW_COLUMNS` replaces the two lists, so the predicted column can sit beside the measured one | T1005 |
+| T1007 | [done] `Charts.tsx`: a fourth tab, sorted by temperature, log axis in powers of ten | T1005 |
+| T1008 | [done] tests: the exact identity with route B's residual, the round trip in all three coherence modes, the CSV column, the tab | T1006, T1007 |
+
+**Gate:** the plotted prediction and the direct route's residual are one
+quantity rather than two that agree. Met, and asserted as exact equality rather
+than to a tolerance: `ln(Jc) - ln(jc_model)` equals `residuals` element for
+element under both gap models, because both leave `_predicted_jc` at a single
+call site. Approximate agreement there would mean a second expression had
+appeared somewhere.
+
+176 backend tests, 25 e2e tests.
+
+*Why this plot alone is not a dense curve.* The other two need only the fitted
+parameters, so they can be sampled at any temperature. Equation (1) needs the
+coherence length as well, and that comes from the fit only under
+`FIXED_KAPPA`; from an upper critical field or a supplied coherence length it
+exists only where a measurement put it. Filling the gaps would mean assuming a
+form for the temperature dependence of the upper critical field, which spec
+section 9 excludes. The prediction is therefore reported at the measured
+temperatures in all three modes — one branch instead of three, and no
+assumption the analysis has not already stated. At the 22 and 25 points of the
+shipped examples the polyline is indistinguishable from a curve; at five points
+it would look like what it is, which is honest.
+
+*What it cost to keep the two consistent.* Route A never looks at `Jc` while it
+is fitting, so it had no reason to hold a coherence length. It carries one now
+purely so the reported prediction exists for that route too. The alternative —
+computing the prediction in `pipeline.py` after the fit — would have left the
+identity with route B's residual as a coincidence to be maintained by hand
+instead of one that cannot break.
+
+*One presentation defect, found by looking.* The first screenshot of the new
+tab labelled the axis `10B`, which is how Plotly abbreviates ten to the tenth.
+A billion is a word with two meanings and the axis carries a unit, so the ticks
+are powers of ten instead. Nothing but looking at the picture would have caught
+that.
+
+---
+
 ## Requirement coverage
 
 Every functional requirement maps to at least one task.
@@ -307,7 +360,8 @@ Every functional requirement maps to at least one task.
 | FR-010 | T108, T307 | FR-024 | T110, T602, T603 |
 | FR-011 | T109, T307 | FR-025 | T308 |
 | FR-012 | T109, T308 | FR-026 | T401, T804 |
-| FR-013 | T109, T307 | FR-027 | T207, T401, T403 |
+| FR-013 | T109, T307 | FR-027 | T207, T401, T403, T1006 |
+| | | FR-026a | T1001, T1003, T1007, T1008 |
 | | | FR-027a | T805, T806, T807, T808 |
 | FR-014 | T109, T308 | FR-028 | T122, T206, T404 |
 | | | FR-029 | T111, T120b, T501 |

@@ -169,6 +169,11 @@ class FitResult:
     #: the data look like on a superfluid-density plot. It needs lambda0, so
     #: only the fit can produce it.
     rho_s_measured: FloatArray
+    #: Equation (1) at the fitted parameters, at each measured temperature, in
+    #: input order (A/m^2). On the measurements rather than on a dense grid
+    #: because equation (1) needs xi, which outside FIXED_KAPPA exists only
+    #: where a measurement supplied it (FR-026a).
+    jc_model: FloatArray
     n_points: int
     n_free_parameters: int
     converged: bool

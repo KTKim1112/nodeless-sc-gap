@@ -242,8 +242,26 @@ open, and each plot can be saved as an image.
   fitted curve together. The fitted curve MUST begin at absolute zero, so that
   the intercept the analysis reports is visible on the plot rather than
   inferred from where the curve happens to start.
+- **FR-026a** The system MUST plot the critical current density against
+  temperature, showing the measured values and what the fitted parameters
+  predict for the same measurements together.
+
+  *Why this one is not drawn as a smooth curve.* The predicted critical current
+  density needs the coherence length as well as the penetration depth. Under a
+  fixed Ginzburg-Landau parameter the coherence length follows from the fit and
+  is known at every temperature; from an upper critical field or a supplied
+  coherence length it is known only where a measurement was taken, and filling
+  the gaps between them would require assuming a temperature dependence for the
+  upper critical field, which section 9 excludes. The prediction is therefore
+  reported at the measured temperatures in all three cases, so that what is
+  plotted rests on no assumption the analysis has not already stated.
+
+  This is what the residuals of the direct extraction route already measure, so
+  the plot and those residuals MUST agree exactly rather than approximately.
 - **FR-027** The system MUST let the user save the numerical results as a table
-  that spreadsheet software can open, and each plot as an image file.
+  that spreadsheet software can open, and each plot as an image file. That
+  table MUST carry the predicted critical current density beside the measured
+  one, since both have one value per measurement.
 - **FR-027a** The system MUST let the user save the fitted curve as numbers on
   the same terms: a table that spreadsheet software can open, carrying the
   curve that was drawn and not a different sampling of it, and stating the

@@ -108,7 +108,7 @@ give gaps about 20 % apart, so which one was used has to be reported.
     specs/001-jc-to-gap/              what is being built and why, and the physics
     backend/app/core/                 the physics. No web framework, ever
     backend/app/                      the HTTP layer over it
-    backend/tests/                    166 tests
+    backend/tests/                    176 tests
     frontend/src/                     the page. Its Korean lives here
     frontend/e2e/                     the acceptance walkthrough, executed
     docs/                             how this was built, for the maintainer
@@ -122,8 +122,8 @@ interface, without any of the rest.
 
 ## Checking it
 
-    cd backend && .\.venv\Scripts\python.exe -m pytest -v      # 166 tests
-    cd frontend && npm run test:e2e                             # 23 tests, starts both servers
+    cd backend && .\.venv\Scripts\python.exe -m pytest -v      # 176 tests
+    cd frontend && npm run test:e2e                             # 25 tests, starts both servers
     cd frontend && npm run shots                                # screenshots for review by eye
 
 The test that matters most generates `Jc(T)` from known parameters and checks

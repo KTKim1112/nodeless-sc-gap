@@ -16,11 +16,17 @@ from app.core import fitting
 from app.core import lambda_solver as ls
 from app.core.constants import BCS_ALPHA, BCS_RATIO, KB, MEV_TO_J
 from app.core.errors import TcFixedBelowData
-from app.core.gap_models import coupling_ratio
+from app.core.gap_models import coupling_ratio, lambda_of_T
 from app.core.types import AnalysisSettings, CoherenceSource, FitRoute, GapModel
 from app.core.validation import build_dataset
 
-from .conftest import TRUE_DELTA0, TRUE_LAMBDA0, TRUE_TC, synthesise
+from .conftest import (
+    TRUE_DELTA0,
+    TRUE_KAPPA,
+    TRUE_LAMBDA0,
+    TRUE_TC,
+    synthesise,
+)
 
 TOLERANCE = 0.01  # 1 %, the requirement in research R9
 
@@ -230,3 +236,64 @@ def test_the_gap_is_better_determined_than_the_coupling_ratio():
 def test_residual_count_matches_the_data():
     fit, _ = _fit_both_routes(GapModel.CLEAN)
     assert fit.residuals.size == fit.n_points == 20
+
+
+# --- the predicted Jc, FR-026a -----------------------------------------------
+
+@pytest.mark.parametrize("model", [GapModel.CLEAN, GapModel.DIRTY])
+def test_predicted_jc_is_exactly_what_the_direct_residual_measures(model):
+    """FR-026a. The plotted prediction and the residual must be one quantity.
+
+    Route B's residual is ln(Jc_data) - ln(Jc_model), so if the reported
+    jc_model is that same Jc_model the identity holds to the last bit rather
+    than to within a tolerance -- both come from one call site with one set of
+    parameters. Asserted exactly, because approximate agreement here would mean
+    a second, silently different expression had appeared.
+    """
+    _, fit = _fit_both_routes(model)
+    data = synthesise(model)
+    recovered = np.log(data["jc"]) - np.log(fit.jc_model)
+    assert np.array_equal(recovered, fit.residuals)
+
+
+@pytest.mark.parametrize("model", [GapModel.CLEAN, GapModel.DIRTY])
+def test_predicted_jc_reproduces_noiseless_data(model):
+    """The data were generated from equation (1); the fit must return there.
+
+    This is the round trip of the whole chain seen from the Jc end, and it is
+    what the new plot draws. Both routes, because route A never looks at Jc
+    while it is fitting and could otherwise report a prediction that is right
+    in lambda and wrong here.
+    """
+    data = synthesise(model)
+    for fit in _fit_both_routes(model):
+        assert fit.jc_model.shape == data["jc"].shape
+        assert np.all(np.isfinite(fit.jc_model))
+        assert fit.jc_model == pytest.approx(data["jc"], rel=TOLERANCE)
+
+
+def test_predicted_jc_exists_in_every_coherence_mode(
+    dataset_xi, dataset_hc2, dataset_kappa,
+    settings_xi, settings_hc2, settings_kappa,
+):
+    """FR-026a: the prediction is available whichever way xi was established.
+
+    Under a fixed kappa the coherence length is the model's own rather than the
+    table's, so this also pins that the fixed-kappa branch did not quietly fall
+    back to lambda_data / kappa.
+    """
+    cases = [(dataset_xi, settings_xi), (dataset_hc2, settings_hc2),
+             (dataset_kappa, settings_kappa)]
+    for dataset, settings in cases:
+        table = ls.build_lambda_table(dataset, settings)
+        for fit in (fitting.fit_route_a(table, settings),
+                    fitting.fit_route_b(dataset, settings)):
+            assert np.all(fit.jc_model > 0.0)
+            assert fit.jc_model == pytest.approx(dataset.jc, rel=TOLERANCE)
+
+    table = ls.build_lambda_table(dataset_kappa, settings_kappa)
+    fit = fitting.fit_route_a(table, settings_kappa)
+    lam = lambda_of_T(table.temperature_K, fit.lambda0.value, fit.delta0.value,
+                      fit.tc.value, fit.gap_model)
+    expected = ls.jc_model(lam, lam / TRUE_KAPPA)
+    assert np.array_equal(np.asarray(fit.jc_model), np.asarray(expected))

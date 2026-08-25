@@ -148,6 +148,7 @@ the equations it implements.
 | `chi2_reduced` | `float` | — | |
 | `residuals` | `float[]` | — | one per data point, in input order |
 | `rho_s_measured` | `float[]` | — | `lambda0^2 / lambda_data^2` at each measured point, in input order |
+| `jc_model` | `float[]` | A/m^2 | equation (1) evaluated at the fitted parameters, at each measured temperature, in input order |
 | `n_points` | `int` | — | |
 | `n_free_parameters` | `int` | — | |
 | `converged` | `bool` | — | false means the result must not be displayed as a fit (FR-014) |
@@ -164,6 +165,19 @@ plot, and it lives here rather than being computed by whoever draws the plot
 because it needs `lambda0`, which only the fit knows. Keeping the definition
 `rho_s = lambda0^2 / lambda^2` in one place is the same reason every other
 formula is in the core.
+
+`jc_model` is the same idea run the other way: the fitted parameters pushed
+back through equation (1) to say what critical current density they predict. It
+is on the measured temperatures rather than on the grid of `SuperfluidCurve`
+because equation (1) needs `xi` as well as `lambda`, and outside `FIXED_KAPPA`
+the coherence length exists only where a measurement supplied it (FR-026a).
+
+`xi` here is the model's own: `lambda_model / kappa` under `FIXED_KAPPA`, where
+the fit determines it, and the supplied value under the other two sources,
+where it is data. This is the same rule the `DIRECT` residual applies, and
+using one expression for both is what makes
+`residuals == ln(jc) - ln(jc_model)` hold exactly for that route rather than to
+within rounding.
 
 ---
 
