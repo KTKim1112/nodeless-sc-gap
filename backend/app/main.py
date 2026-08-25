@@ -10,12 +10,11 @@ transport concern, and putting it on the exception classes would have given
 
 from __future__ import annotations
 
-import pathlib
-
 from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
+from . import resources
 from .api.routes import router
 from .core.errors import CoreError
 from .schemas import Health
@@ -34,7 +33,7 @@ _DEFAULT_STATUS = 422
 
 #: Where the production image puts the built frontend. Absent during backend
 #: development, which is why its absence is not an error.
-STATIC_DIR = pathlib.Path(__file__).resolve().parents[1] / "static"
+STATIC_DIR = resources.root() / "static"
 
 
 def create_app() -> FastAPI:

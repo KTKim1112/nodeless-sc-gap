@@ -31,3 +31,9 @@ desktop.ini
 *.csv
 !backend/examples/*.csv
 !backend/tests/data/*.csv
+
+# --- Packaging ---
+# PyInstaller output. Rebuilt by packaging/build.ps1, and the executable is
+# 54 MB, which is not a thing to keep ten copies of in history.
+packaging/build/
+packaging/dist/

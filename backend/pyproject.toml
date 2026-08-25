@@ -27,6 +27,13 @@ dev = [
     # use pandas and must not acquire the dependency.
     "pandas>=2.0",
 ]
+package = [
+    # Freezes the application into a standalone Windows executable for people
+    # who have no Python. Build time only: nothing under `app/` imports it, and
+    # `app/resources.py` reads the attribute it sets rather than importing it,
+    # so the application does not acquire a dependency on its packager.
+    "pyinstaller>=6.0",
+]
 
 [tool.setuptools.packages.find]
 include = ["app*"]

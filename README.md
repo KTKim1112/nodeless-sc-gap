@@ -28,6 +28,20 @@ current for thin-film superconductors*, Nature Communications **6**, 7820
 Then open <http://localhost:8000>. One image, one port; the same process serves
 the page and the API.
 
+### As a standalone Windows executable
+
+    .\packaging\build.ps1              # one file,   packaging/dist/NodelessSC.exe
+    .\packaging\build.ps1 -OneDir      # one folder, zipped, starts faster
+
+For a recipient with no Python, no Node, and no administrator rights: they open
+it, a browser opens on a port the operating system picked, and closing the
+console window stops it. 54 MB as one file and 12.6 s to start, against 55 MB
+zipped and 5.0 s; the difference is the bootloader unpacking itself on every
+launch.
+
+It has never been run on a machine without Python. See the Phase 9 gate in
+`specs/001-jc-to-gap/tasks.md` for what was checked instead.
+
 ### For development
 
     .\dev.ps1

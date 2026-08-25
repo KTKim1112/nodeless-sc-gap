@@ -239,6 +239,56 @@ dirty limit. The tests assert equality, not closeness, for that reason.
 
 ---
 
+## Phase 9 — A build for someone who has no Python
+
+Distribution, not a feature: the analysis behaves identically, and the only new
+thing is a way to start it on a machine that has nothing installed. No
+functional requirement changes.
+
+| Id | Task | Depends on |
+| --- | --- | --- |
+| T901 | [done] `app/resources.py`: one function deciding where `static/` and `examples/` are, from source or from a frozen bundle | — |
+| T902 | [done] `main.py` and `examples_store.py` use it instead of computing paths from `__file__` each | T901 |
+| T903 | [done] `app/desktop.py`: bind a loopback socket on an OS-chosen port, hand it to uvicorn, open a browser once the server answers | T902 |
+| T904 | [done] `packaging/entry.py`, `packaging/NodelessSC.spec`, `packaging/build.ps1` | T903 |
+| T905 | [done] `tests/test_resources.py`: both branches of `root()`, including the frozen one that nothing else reaches | T901 |
+| T906 | [done] `.gitignore`: `packaging/build/`, `packaging/dist/` | T904 |
+
+**Gate:** the executable runs a full analysis and returns the values the source
+build returns. **Met on this machine**: `lambda(0) = 250.0422 nm`,
+`Delta(0) = 1.40030 meV`, `Tc = 9.2002 K`, `2 Delta(0)/kB Tc = 3.5325`, and the
+curve's first row is `T = 0` at `250.042240 nm` — identical to
+`python -m app.desktop`. 171 backend tests pass.
+
+**Not met, and it is the part that matters**: whether it runs where Python is
+absent. This machine has Python, Node, and the project's own virtual
+environment, so nothing observed here is evidence about a clean one. The same
+gap as the Docker image in Phase 7, and it closes the same way — copy it to
+another machine and open it.
+
+Two measurements decided the shape of the build.
+
+*One file against one folder.* One file was specified. Measured: it starts in
+12.6 s, because the bootloader unpacks 54 MB into a temporary directory on
+every launch and shows nothing on screen while it does; a cold first run took
+19.4 s. One folder starts in 5.0 s. Both are built by the same spec — the
+`-OneDir` switch — because which one is right depends on whether the recipient
+minds unzipping, not on anything technical.
+
+*A port is chosen by the operating system, not named.* A fixed port is a guess
+about a machine nobody has seen, and 8000 is already taken on a great many. The
+socket is bound first and handed to uvicorn, so nothing can take the port
+between choosing it and listening on it.
+
+The first build was 11 MB and should have been 54. PyInstaller runs its entry
+point as `__main__`, so `app/desktop.py`'s `from .main import app` failed — at
+analysis time as well as at runtime, and everything past that import went
+unbundled, numpy and scipy included. The size was the only visible symptom
+before the executable was run. `packaging/entry.py` exists solely to make that
+import absolute.
+
+---
+
 ## Requirement coverage
 
 Every functional requirement maps to at least one task.

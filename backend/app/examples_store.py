@@ -12,12 +12,12 @@ actually delivers.
 from __future__ import annotations
 
 import json
-import pathlib
 from functools import lru_cache
 
+from . import resources
 from .core.errors import CoreError
 
-EXAMPLES_DIR = pathlib.Path(__file__).resolve().parents[1] / "examples"
+EXAMPLES_DIR = resources.root() / "examples"
 MANIFEST = EXAMPLES_DIR / "manifest.json"
 
 
