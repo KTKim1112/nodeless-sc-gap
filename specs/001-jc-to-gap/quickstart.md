@@ -160,11 +160,15 @@ Paste a table with a text value in the `Jc` column.
 
 **Pass:** the failure names the offending row and column, before any physics ran.
 
-### 9. Results can be taken away (AS-10, FR-027)
+### 9. Results can be taken away (AS-10, FR-027, FR-027a)
 
 Download the table; open it in a spreadsheet. Save each plot as an image.
+Download the fitted curve; plot it against the measured points from the first
+file.
 
-**Pass:** every column header carries its unit; the images are legible.
+**Pass:** every column header carries its unit; the images are legible; the
+curve's first row is `T = 0` with `lambda_model_nm` equal to the `lambda(0)`
+the summary reported, and replotting it reproduces the figure on screen.
 
 ### 10. Nothing leaves the machine (QA-006)
 

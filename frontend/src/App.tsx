@@ -199,13 +199,23 @@ export default function App() {
           {busy ? '계산 중…' : '분석 실행'}
         </button>
         {result && (
-          <button
-            type="button"
-            className="secondary"
-            onClick={() => void api.downloadCsv(result)}
-          >
-            결과 CSV 내려받기
-          </button>
+          <>
+            <button
+              type="button"
+              className="secondary"
+              onClick={() => void api.downloadCsv(result)}
+            >
+              결과 CSV 내려받기
+            </button>
+            <button
+              type="button"
+              className="secondary"
+              onClick={() => void api.downloadCurveCsv(result)}
+              title="그래프에 그려진 피팅 곡선을 숫자로 받습니다. 다른 프로그램에서 측정값과 함께 다시 그릴 때 쓰세요."
+            >
+              피팅 곡선 CSV 내려받기
+            </button>
+          </>
         )}
         {!ready && (parsed || stale) && (
           <span className="muted small">

@@ -192,9 +192,11 @@ paths:
       tags: [export]
       summary: Render an analysis result as a spreadsheet-readable table (FR-027)
       description: >
-        The backend formats this rather than the frontend so that units,
-        column names, and significant figures are defined in exactly one place.
-        Plot images are exported by the frontend plotting library.
+        One row per measured temperature, carrying the inverted quantities and
+        the fit residual at each point. The backend formats this rather than
+        the frontend so that units, column names, and significant figures are
+        defined in exactly one place. Plot images are exported by the frontend
+        plotting library.
       requestBody:
         required: true
         content:
@@ -203,6 +205,32 @@ paths:
       responses:
         "200":
           description: The table
+          content:
+            text/csv:
+              schema: { type: string }
+        "422":
+          $ref: "#/components/responses/Error"
+
+  /api/export/curve.csv:
+    post:
+      tags: [export]
+      summary: Render the fitted model curve as a table (FR-027a)
+      description: >
+        The curve drawn on the plots, as numbers, so that a user can replot it
+        beside their own measurements. A separate resource from
+        /api/export/csv because the two have different row counts: that table
+        has one row per measurement, this one has `curve.temperature_K` rows on
+        a grid chosen independently of where the measurements lie. Both carry
+        the same self-describing comment block, because either file may be read
+        without the other (constitution VI).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AnalyzeResponse" }
+      responses:
+        "200":
+          description: The curve
           content:
             text/csv:
               schema: { type: string }

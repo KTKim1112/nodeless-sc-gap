@@ -239,9 +239,21 @@ open, and each plot can be saved as an image.
 - **FR-025** The system MUST show the per-temperature results as a table.
 - **FR-026** The system MUST plot the penetration depth against temperature and
   the superfluid density against temperature, showing measured points and the
-  fitted curve together.
+  fitted curve together. The fitted curve MUST begin at absolute zero, so that
+  the intercept the analysis reports is visible on the plot rather than
+  inferred from where the curve happens to start.
 - **FR-027** The system MUST let the user save the numerical results as a table
   that spreadsheet software can open, and each plot as an image file.
+- **FR-027a** The system MUST let the user save the fitted curve as numbers on
+  the same terms: a table that spreadsheet software can open, carrying the
+  curve that was drawn and not a different sampling of it, and stating the
+  conditions it was produced under.
+
+  *Why this is separate from FR-027.* An image cannot be replotted. A user
+  preparing a figure needs the model curve as numbers to draw it beside their
+  own measurements in their own tool, and the per-temperature table of FR-027
+  does not contain it: that table has one row per measurement, and the curve is
+  sampled independently of where the measurements happen to lie.
 - **FR-028** The system MUST provide at least two built-in example datasets that
   exercise the full analysis.
 

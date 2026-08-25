@@ -113,15 +113,32 @@ def job_status(job_id: str) -> schemas.JobStatus:
 
 # --- export ------------------------------------------------------------------
 
-#: Column headers for the exported table. Each carries its unit, because a
-#: number without one is not a result (QA-004). Defined here rather than in the
-#: frontend so that units and names exist in exactly one place.
-_CSV_COLUMNS = [
+#: Column headers for the per-measurement table. Each carries its unit, because
+#: a number without one is not a result (QA-004). Defined here rather than in
+#: the frontend so that units and names exist in exactly one place.
+#:
+#: The first group is read off the lambda table, the second off the fit. Both
+#: hold one value per measured point, in the order the points were given, so
+#: they zip into a single row.
+_TABLE_COLUMNS = [
     ("T_K", "temperature_K"),
     ("Jc_A_per_m2", "jc_A_per_m2"),
     ("xi_nm", "xi_nm"),
     ("lambda_nm", "lambda_nm"),
     ("kappa", "kappa"),
+]
+_FIT_COLUMNS = [
+    ("rho_s_measured", "rho_s_measured"),
+    ("fit_residual", "residuals"),
+]
+
+#: The fitted curve, on its own grid. Suffixed `_model` throughout so that a
+#: column cannot be mistaken for a measurement once the two files sit in the
+#: same directory.
+_CURVE_COLUMNS = [
+    ("T_K", "temperature_K"),
+    ("rho_s_model", "rho_s"),
+    ("lambda_model_nm", "lambda_nm"),
 ]
 
 
@@ -129,11 +146,65 @@ _CSV_COLUMNS = [
 def export_csv(result: schemas.AnalyzeResponse) -> Response:
     """Render a completed analysis as a spreadsheet-readable table (FR-027).
 
-    The fitted parameters and the assumptions in play go in a comment block
-    above the table, so that the file is self-describing once it has been
-    detached from the screen that produced it (constitution VI).
+    One row per measured temperature: the inverted quantities, and the fit's
+    view of that same point.
     """
     buffer = io.StringIO()
+    _write_conditions(buffer, result)
+
+    writer = csv.writer(buffer, lineterminator="\n")
+    writer.writerow([header for header, _ in _TABLE_COLUMNS + _FIT_COLUMNS])
+    columns = (
+        [getattr(result.lambda_table, name) for _, name in _TABLE_COLUMNS]
+        + [getattr(result.fit, name) for _, name in _FIT_COLUMNS]
+    )
+    for row in zip(*columns):
+        writer.writerow([f"{value:.10g}" for value in row])
+
+    return _csv_response(buffer.getvalue(), "nodeless_sc_result.csv")
+
+
+@router.post("/export/curve.csv", tags=["export"])
+def export_curve_csv(result: schemas.AnalyzeResponse) -> Response:
+    """Render the fitted model curve as a table (FR-027a).
+
+    A separate resource from the table above because the two have different row
+    counts, and a spreadsheet column cannot be half one thing and half another:
+    that table has one row per measurement, this one has however many points
+    the curve was sampled at, on a grid chosen without reference to where the
+    measurements happen to lie.
+
+    Exports exactly what was plotted. Resampling it here would give the user a
+    file that disagrees with the figure they are looking at, which is a defect
+    that would surface only in someone else's paper.
+    """
+    buffer = io.StringIO()
+    _write_conditions(buffer, result)
+
+    writer = csv.writer(buffer, lineterminator="\n")
+    writer.writerow([header for header, _ in _CURVE_COLUMNS])
+    columns = [getattr(result.curve, name) for _, name in _CURVE_COLUMNS]
+    for row in zip(*columns):
+        writer.writerow([f"{value:.10g}" for value in row])
+
+    return _csv_response(buffer.getvalue(), "nodeless_sc_curve.csv")
+
+
+def _csv_response(content: str, filename: str) -> Response:
+    return Response(
+        content=content,
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+def _write_conditions(buffer: io.StringIO, result: schemas.AnalyzeResponse) -> None:
+    """The comment block that makes an exported file self-describing.
+
+    Written to both exports rather than to the first one only: either file may
+    be opened without the other, and a curve whose conditions are unknown is
+    not a result (constitution VI).
+    """
     fit, diagnostics = result.fit, result.diagnostics
 
     def comment(line: str = "") -> None:
@@ -172,19 +243,6 @@ def export_csv(result: schemas.AnalyzeResponse) -> Response:
     for warning in diagnostics.warnings:
         comment(f"{warning.severity.value}: {warning.code} {warning.params or ''}".rstrip())
     comment()
-
-    writer = csv.writer(buffer, lineterminator="\n")
-    writer.writerow([header for header, _ in _CSV_COLUMNS])
-    table = result.lambda_table
-    columns = [getattr(table, attribute) for _, attribute in _CSV_COLUMNS]
-    for row in zip(*columns):
-        writer.writerow([f"{value:.10g}" for value in row])
-
-    return Response(
-        content=buffer.getvalue(),
-        media_type="text/csv; charset=utf-8",
-        headers={"Content-Disposition": 'attachment; filename="nodeless_sc_result.csv"'},
-    )
 
 
 def _pm(parameter: schemas.FittedParameter) -> str:

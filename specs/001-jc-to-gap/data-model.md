@@ -178,8 +178,17 @@ measured points.
 | `rho_s` | `float[]` | — |
 | `lambda_` | `float[]` | m |
 
-Sampled on a uniform grid from the lowest measured temperature to the fitted
-`Tc`, 200 points by default.
+Sampled on a uniform grid from `T = 0` to just below the fitted `Tc`, 200
+points by default.
+
+Starting at zero rather than at the lowest measured temperature (FR-026). Both
+gap models are total at `T = 0`: `delta_of_T` returns `Delta(0)` there,
+`_reduced_gap` returns `d = inf`, and both superfluid densities return exactly
+`1`. So `lambda(0)` on the curve is bit-for-bit the fitted `lambda(0)`, and the
+plot's intercept *is* the reported number rather than an extrapolation of it.
+
+Stopping just short of `Tc` rather than at it, because `rho_s -> 0` there and
+`lambda` diverges; a plot and an exported table both need a finite last point.
 
 ---
 

@@ -215,10 +215,48 @@ test('the results can be downloaded as a table with units in the headers', async
   for await (const chunk of stream) chunks.push(chunk as Buffer)
   const csv = Buffer.concat(chunks).toString('utf8')
 
-  expect(csv).toContain('T_K,Jc_A_per_m2,xi_nm,lambda_nm,kappa')
+  expect(csv).toContain('T_K,Jc_A_per_m2,xi_nm,lambda_nm,kappa,rho_s_measured,fit_residual')
   expect(csv).toContain('SELF_FIELD_TRANSPORT_REQUIRED')
   expect(csv).toContain('lambda(0) [nm]')
 })
+
+// --- FR-027a: the fitted curve as numbers ------------------------------------
+
+test('the fitted curve can be downloaded and starts on the reported intercept',
+  async ({ page }) => {
+    await loadExample(page, 'nbti_like')
+    await analyse(page)
+
+    // The number the summary reports, as the user reads it off the screen.
+    const summary = page.locator('section.card', { hasText: '피팅 결과' })
+    const lambda0 = await summary.getByRole('row', { name: /λ\(0\)/ }).innerText()
+    const intercept = Number(lambda0.match(/([\d.]+)\s*±/)![1])
+
+    const [download] = await Promise.all([
+      page.waitForEvent('download'),
+      page.getByRole('button', { name: '피팅 곡선 CSV 내려받기' }).click(),
+    ])
+    expect(download.suggestedFilename()).toBe('nodeless_sc_curve.csv')
+
+    const stream = await download.createReadStream()
+    const chunks: Buffer[] = []
+    for await (const chunk of stream) chunks.push(chunk as Buffer)
+    const csv = Buffer.concat(chunks).toString('utf8')
+
+    expect(csv).toContain('T_K,rho_s_model,lambda_model_nm')
+    // Constitution VI: this file may be opened without the other one.
+    expect(csv).toContain('SELF_FIELD_TRANSPORT_REQUIRED')
+
+    const rows = csv.split('\n').filter(l => l && !l.startsWith('#') && !l.startsWith('T_K'))
+    expect(rows.length).toBeGreaterThan(100)
+
+    // FR-026: the first row is T = 0, and lambda there is the fitted lambda(0)
+    // the user was just shown -- not an extrapolation towards it.
+    const [t0, rho0, lam0] = rows[0].split(',').map(Number)
+    expect(t0).toBe(0)
+    expect(rho0).toBe(1)
+    expect(lam0).toBeCloseTo(intercept, 2)
+  })
 
 // --- FR-026, FR-019: the plots ----------------------------------------------
 

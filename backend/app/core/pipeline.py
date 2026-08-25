@@ -42,13 +42,20 @@ def run_lambda_table(
     return build_lambda_table(dataset, settings)
 
 
-def build_curve(fit: FitResult, t_min: float) -> SuperfluidCurve:
-    """A dense model curve from the coldest measured point up towards Tc.
+def build_curve(fit: FitResult) -> SuperfluidCurve:
+    """A dense model curve from absolute zero up towards Tc.
+
+    Starting at zero rather than at the coldest measurement (FR-026), so that
+    the intercept the analysis reports is on the plot instead of being inferred
+    from where the data happen to stop. Both gap models are total at T = 0 --
+    delta_of_T returns Delta(0), _reduced_gap returns d = inf, and both
+    superfluid densities return exactly 1 -- so lambda at the first sample is
+    bit-for-bit the fitted lambda(0) rather than an extrapolation towards it.
 
     Stopping just short of Tc rather than at it, because rho_s -> 0 there and
-    lambda diverges; a plot needs a finite last point.
+    lambda diverges; a plot and an exported table both need a finite last point.
     """
-    t = np.linspace(t_min, fit.tc.value * 0.999, CURVE_POINTS)
+    t = np.linspace(0.0, fit.tc.value * 0.999, CURVE_POINTS)
     r = rho_s(t, fit.delta0.value, fit.tc.value, fit.gap_model)
     lam = lambda_of_T(t, fit.lambda0.value, fit.delta0.value, fit.tc.value, fit.gap_model)
     return SuperfluidCurve(temperature_K=t, rho_s=r, lambda_=lam)
@@ -84,7 +91,7 @@ def run_analysis(
     fit = run_fit(dataset, table, settings)
     chi2_clean, chi2_dirty = _chi2_both_models(dataset, table, settings)
     report = build_report(table, fit, settings, chi2_clean, chi2_dirty)
-    curve = build_curve(fit, float(np.min(table.temperature_K)))
+    curve = build_curve(fit)
 
     result_uncertainty = None
     if uncertainty is not None and uncertainty.any_uncertainty:

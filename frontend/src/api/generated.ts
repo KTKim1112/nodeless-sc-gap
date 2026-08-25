@@ -184,11 +184,40 @@ export interface paths {
          * Export Csv
          * @description Render a completed analysis as a spreadsheet-readable table (FR-027).
          *
-         *     The fitted parameters and the assumptions in play go in a comment block
-         *     above the table, so that the file is self-describing once it has been
-         *     detached from the screen that produced it (constitution VI).
+         *     One row per measured temperature: the inverted quantities, and the fit's
+         *     view of that same point.
          */
         post: operations["export_csv_api_export_csv_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/export/curve.csv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Export Curve Csv
+         * @description Render the fitted model curve as a table (FR-027a).
+         *
+         *     A separate resource from the table above because the two have different row
+         *     counts, and a spreadsheet column cannot be half one thing and half another:
+         *     that table has one row per measurement, this one has however many points
+         *     the curve was sampled at, on a grid chosen without reference to where the
+         *     measurements happen to lie.
+         *
+         *     Exports exactly what was plotted. Resampling it here would give the user a
+         *     file that disagrees with the figure they are looking at, which is a defect
+         *     that would surface only in someone else's paper.
+         */
+        post: operations["export_curve_csv_api_export_curve_csv_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -885,6 +914,39 @@ export interface operations {
         };
     };
     export_csv_api_export_csv_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnalyzeResponse"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    export_curve_csv_api_export_curve_csv_post: {
         parameters: {
             query?: never;
             header?: never;

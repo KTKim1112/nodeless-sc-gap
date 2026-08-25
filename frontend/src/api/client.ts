@@ -116,22 +116,30 @@ export const api = {
 
   job: (jobId: string) => request<JobStatus>(`/api/jobs/${encodeURIComponent(jobId)}`),
 
-  /** Fetches the CSV and hands it to the browser as a download. */
-  async downloadCsv(result: AnalyzeResponse, filename = 'nodeless_sc_result.csv') {
-    const response = await fetch('/api/export/csv', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(result),
-    })
-    if (!response.ok) {
-      throw new ApiError({ code: 'REQUEST_REJECTED', params: {} }, response.status)
-    }
-    const blob = await response.blob()
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = filename
-    link.click()
-    URL.revokeObjectURL(url)
-  },
+  /** The per-measurement table: one row per measured temperature (FR-027). */
+  downloadCsv: (result: AnalyzeResponse) =>
+    download('/api/export/csv', result, 'nodeless_sc_result.csv'),
+
+  /** The fitted curve as numbers, for replotting elsewhere (FR-027a). */
+  downloadCurveCsv: (result: AnalyzeResponse) =>
+    download('/api/export/curve.csv', result, 'nodeless_sc_curve.csv'),
+}
+
+/** Fetches a CSV and hands it to the browser as a download. */
+async function download(path: string, result: AnalyzeResponse, filename: string) {
+  const response = await fetch(path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(result),
+  })
+  if (!response.ok) {
+    throw new ApiError({ code: 'REQUEST_REJECTED', params: {} }, response.status)
+  }
+  const blob = await response.blob()
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  link.click()
+  URL.revokeObjectURL(url)
 }

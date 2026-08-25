@@ -134,6 +134,75 @@ def test_export_csv_is_self_describing(client, example_request):
     assert len(data_rows) == len(analysis["lambda_table"]["temperature_K"])
 
 
+def test_export_csv_carries_the_fit_view_of_each_point(client, example_request):
+    """The per-measurement table reports the fit at the measured points too.
+
+    rho_s_measured and the residual are one value per measurement, in the same
+    order as the inversion, so they belong in this table rather than in a
+    second one. If that ever stops being true the zip in export_csv would
+    silently truncate to the shorter of the two, so assert the width.
+    """
+    analysis = client.post("/api/analyze", json=example_request).json()
+    text = client.post("/api/export/csv", json=analysis).text
+
+    header = next(line for line in text.splitlines() if line.startswith("T_K"))
+    assert header == "T_K,Jc_A_per_m2,xi_nm,lambda_nm,kappa,rho_s_measured,fit_residual"
+
+    rows = [line.split(",") for line in text.splitlines()
+            if line and not line.startswith("#") and not line.startswith("T_K")]
+    assert len(rows) == len(analysis["fit"]["residuals"])
+    assert all(len(row) == 7 for row in rows)
+    assert float(rows[0][5]) == pytest.approx(analysis["fit"]["rho_s_measured"][0])
+    assert float(rows[0][6]) == pytest.approx(analysis["fit"]["residuals"][0])
+
+
+def test_export_curve_is_the_curve_that_was_plotted(client, example_request):
+    """FR-027a. The exported curve must be the drawn one, not a resampling.
+
+    Asserted value by value rather than by shape: a file that disagrees with
+    the figure beside it is a defect that would surface only in someone else's
+    paper, and nothing about the file's shape would reveal it.
+    """
+    analysis = client.post("/api/analyze", json=example_request).json()
+    response = client.post("/api/export/curve.csv", json=analysis)
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/csv")
+    assert "nodeless_sc_curve.csv" in response.headers["content-disposition"]
+
+    text = response.text
+    assert "T_K,rho_s_model,lambda_model_nm" in text
+    # Constitution VI: either file may be opened without the other.
+    assert "SELF_FIELD_TRANSPORT_REQUIRED" in text
+    assert "lambda(0) [nm]" in text
+
+    rows = [line.split(",") for line in text.splitlines()
+            if line and not line.startswith("#") and not line.startswith("T_K")]
+    curve = analysis["curve"]
+    assert len(rows) == len(curve["temperature_K"])
+    for row, t, r, lam in zip(rows, curve["temperature_K"], curve["rho_s"],
+                              curve["lambda_nm"]):
+        assert float(row[0]) == pytest.approx(t)
+        assert float(row[1]) == pytest.approx(r)
+        assert float(row[2]) == pytest.approx(lam)
+
+
+def test_curve_starts_at_absolute_zero_on_the_reported_intercept(client, example_request):
+    """FR-026. The intercept the analysis reports has to be on the curve.
+
+    Not approximately: rho_s is exactly 1 at T = 0 for both gap models, which
+    test_gap_models pins, so lambda there is lambda0 / sqrt(1) and equality is
+    exact. Asserting approx would let a curve that merely starts near zero pass.
+    """
+    analysis = client.post("/api/analyze", json=example_request).json()
+    curve, fit = analysis["curve"], analysis["fit"]
+
+    assert curve["temperature_K"][0] == 0.0
+    assert curve["rho_s"][0] == 1.0
+    assert curve["lambda_nm"][0] == fit["lambda0_nm"]["value"]
+    # And still stops short of Tc, where lambda diverges.
+    assert 0.0 < curve["temperature_K"][-1] < fit["tc_K"]["value"]
+
+
 # --- failures ----------------------------------------------------------------
 
 @pytest.mark.parametrize("mutate,expected_code,expected_status", [

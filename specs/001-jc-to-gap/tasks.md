@@ -204,6 +204,41 @@ base images and that `docker compose up` starts. Run
 
 ---
 
+## Phase 8 — Exporting the fitted curve
+
+Added after Phase 7, on the observation that the per-temperature table cannot
+hold the curve: it has one row per measurement and the curve does not.
+
+| Id | Task | Depends on |
+| --- | --- | --- |
+| T801 | [done] `spec.md`: FR-027a, and FR-026 gains the requirement that the drawn curve begin at absolute zero | — |
+| T802 | [done] `data-model.md`: `SuperfluidCurve` is sampled from `T = 0`, with why both gap models are total there | T801 |
+| T803 | [done] `contracts/openapi.yaml`: `POST /api/export/curve.csv`, and the reason it is a separate resource rather than more columns | T801 |
+| T804 | [done] `core/pipeline.py`: `build_curve` starts at zero and no longer takes `t_min` | T802 |
+| T805 | [done] `app/api/routes.py`: `_write_conditions` extracted so both exports carry it; `rho_s_measured` and `fit_residual` added to the per-measurement table; `/export/curve.csv` added | T803, T804 |
+| T806 | [done] `tests/test_api.py`: the curve export equals the curve in the response value by value; the table's new columns line up with the fit; `T = 0` and `lambda(0)` are exact, not approximate | T805 |
+| T807 | [done] `npm run gen:api`, `client.ts` `downloadCurveCsv`, second button in `App.tsx` | T805 |
+| T808 | [done] `e2e/acceptance.spec.ts`: download the curve and check its first row against the `lambda(0)` read off the screen | T807 |
+
+**Gate:** quickstart step 9, extended. **Met**: 169 backend tests and 24
+end-to-end tests pass, and the screenshots were retaken because the plots
+changed.
+
+Why the curve is exported rather than recomputed at export time: a file that
+disagrees with the figure beside it is a defect that surfaces only in someone
+else's paper. `test_export_curve_is_the_curve_that_was_plotted` asserts value
+by value rather than by shape, because no property of the file's shape would
+reveal that failure.
+
+Why `T = 0` and not the coldest measurement. `lambda(0)` and `Delta(0)` are the
+results, and the curve used to start wherever the data happened to stop, so the
+intercept was never on the plot. Both gap models are total at zero -- verified
+before the change rather than assumed: `rho_s` returns exactly `1.0`, so
+`lambda` there is bit-for-bit the fitted `lambda(0)` in both the clean and the
+dirty limit. The tests assert equality, not closeness, for that reason.
+
+---
+
 ## Requirement coverage
 
 Every functional requirement maps to at least one task.
@@ -221,8 +256,9 @@ Every functional requirement maps to at least one task.
 | FR-009 | T108 | FR-023 | T110, T602 |
 | FR-010 | T108, T307 | FR-024 | T110, T602, T603 |
 | FR-011 | T109, T307 | FR-025 | T308 |
-| FR-012 | T109, T308 | FR-026 | T401 |
+| FR-012 | T109, T308 | FR-026 | T401, T804 |
 | FR-013 | T109, T307 | FR-027 | T207, T401, T403 |
+| | | FR-027a | T805, T806, T807, T808 |
 | FR-014 | T109, T308 | FR-028 | T122, T206, T404 |
 | | | FR-029 | T111, T120b, T501 |
 | | | FR-030 | T109, T111, T503 |
