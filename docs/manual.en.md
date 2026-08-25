@@ -24,7 +24,7 @@ Written so that someone starting from the same place can follow it.
 - [02. Prerequisites — what to install and why](#02-prerequisites--what-to-install-and-why)
 - [03. Orca and Claude Code](#03-orca-and-claude-code--which-is-which)
 - [04. SDD — spec-driven development](#04-sdd--spec-driven-development)
-- [05. Phase 0 to 8 — what actually happened](#05-phase-0-to-8--what-actually-happened)
+- [05. Phase 0 to 9 — what actually happened](#05-phase-0-to-9--what-actually-happened)
 - [06. What one turn looks like](#06-what-one-turn-looks-like)
 - [07. The result](#07-the-result)
 - [08. Doing it again — a checklist](#08-doing-it-again--a-checklist)
@@ -90,7 +90,7 @@ Before the detail, the shape. Three blocks.
 | --- | --- | --- |
 | **Prepare** | Install six tools and connect an account | Typing `claude` in a terminal gets an answer |
 | **Specify** | Write seven documents without writing a line of code | "What is being built and why" fixed in prose. Two physics errors were caught here |
-| **Build** | Phases 1 to 8, each behind a gate | A program running in a browser with 193 tests passing |
+| **Build** | Phases 1 to 9, each behind a gate | A program running in a browser with 195 tests passing |
 
 > **Why this order**
 >
@@ -447,7 +447,7 @@ where it went wrong.
 
 ---
 
-## 05. Phase 0 to 8 — what actually happened
+## 05. Phase 0 to 9 — what actually happened
 
 What follows is the record. Ten commits correspond to the stages. The **what
 actually happened** paragraphs are the most valuable part of this manual: the
@@ -709,6 +709,60 @@ point, so they fit the existing rows and joined that table as two more columns.
 - **Gate** — 169 backend plus 24 end-to-end tests. Screenshots retaken,
   because the plots changed.
 
+### Phase 9 — a build for a machine that has no Python
+
+Distribution, not a feature. Nothing about the analysis changes; the only new
+thing is a way to start it where nothing is installed.
+
+What comes out is one file, `NodelessSC.exe`, 54 MB. The recipient
+double-clicks it — no Python, no Node, no administrator rights. **The size is
+the explanation: Python itself, along with scipy and numpy, is inside it.**
+
+```
+scipy       109 MB  --+
+numpy        31 MB    |  compressed into one 54 MB file
+Python      ~25 MB    |
+fastapi etc   5 MB  --+
+```
+
+**Knowing where its own files are was the problem.** `main.py` and
+`examples_store.py` each computed the location of `static/` and `examples/`
+from `__file__`. That is right when installed and wrong inside a bundle, which
+unpacks itself into a temporary directory on every launch.
+`app/resources.py` now makes that decision once for both.
+
+**The port is asked for rather than chosen.** A fixed port such as 8000 is a
+guess about somebody else's machine, and on many of them it is already taken.
+The socket is bound first and handed to the server, so nothing can slip in
+between choosing a port and listening on it.
+
+> **Measurement changed the deliverable again**
+>
+> "One file" was the decision. Measured, it starts in **12.6 s** — 19.4 s on a
+> cold first run — because it unpacks 54 MB into a temporary directory every
+> time and shows nothing while it does. Shipped as a zipped folder instead it
+> starts in **5.0 s**.
+>
+> Twelve seconds of no response reads as a broken program. Which is right
+> depends on whether the recipient minds unzipping, not on anything technical,
+> so the same build file produces **both**.
+
+> **The first build was 11 MB, when scipy alone is 109**
+>
+> The size was the only symptom. PyInstaller runs its entry point as a
+> top-level script, where `desktop.py`'s relative import has no parent package
+> and fails — during analysis as well as at runtime, so everything that would
+> have been pulled in behind that import, numpy and scipy included, went
+> unbundled. `packaging/entry.py` exists only to make that import absolute.
+
+- **Gate** — 171 backend tests, and the executable returns what the source
+  build returns: `lambda(0) = 250.0422 nm`, `Delta(0) = 1.40030 meV`,
+  `Tc = 9.2002 K`, `2 Delta(0)/kB Tc = 3.5325`.
+- **Not met, and it is the part that matters** — whether it runs where Python
+  is **absent**. This machine has Python installed, so nothing observed here is
+  evidence about a clean one. The same gap as the Docker image in Phase 7, and
+  it closes the same way: copy it to another machine and open it.
+
 ---
 
 ## 06. What one turn looks like
@@ -783,7 +837,7 @@ order are all fixed.
 | | |
 | --- | --- |
 | Commits | 10 |
-| Backend tests | 169 |
+| Backend tests | 171 |
 | Browser tests | 24 |
 | API endpoints | 10 |
 | Requirements | 30, each mapped to a task |
@@ -827,9 +881,16 @@ nodeless-sc-gap/
 │   │   │   └── ... (eleven modules)
 │   │   ├── main.py           the app, and the error-code to HTTP-status table
 │   │   ├── api/routes.py     ten endpoints
-│   │   └── schemas.py        the wire format. Units convert only here
-│   ├── tests/                13 files, 169 tests
+│   │   ├── schemas.py        the wire format. Units convert only here
+│   │   ├── resources.py      where its own files are: installed or packaged
+│   │   └── desktop.py        entry point for the standalone build
+│   ├── tests/                14 files, 171 tests
 │   └── examples/             two built-in examples and their generator
+│
+├── packaging/                building the distributable .exe
+│   ├── build.ps1             the build command
+│   ├── NodelessSC.spec       what goes into the bundle
+│   └── entry.py              the packager's entry script
 │
 ├── frontend/
 │   ├── src/
@@ -863,6 +924,31 @@ npm run dev
 docker compose up --build
 #   -> http://localhost:8000  page and API on one port
 ```
+
+### 7.3.1 Giving it to somebody else
+
+Builds a file that needs nothing installed on the receiving machine.
+
+```powershell
+.\packaging\build.ps1            # one file,   packaging\dist\NodelessSC.exe
+.\packaging\build.ps1 -OneDir    # one folder, packaging\dist\NodelessSC-windows.zip
+```
+
+| | Size | Startup | What the recipient does |
+| --- | --- | --- | --- |
+| One file | 54 MB | 12.6 s | Double-click it |
+| Zipped folder | 55 MB | 5.0 s | Unzip, then double-click the `.exe` inside |
+
+Double-clicking opens a console window, and a browser follows a moment later.
+**Closing the console stops the program** — it is the only stop button the
+recipient has, which is why it is not hidden.
+
+> **How this differs from Docker**
+>
+> Docker also makes a program run identically elsewhere, but **the recipient
+> has to install Docker first.** It is for putting software on a server, not
+> for handing a colleague one file. The executable asks nothing of whoever
+> receives it.
 
 ### 7.4 The screens
 
@@ -946,7 +1032,7 @@ separate clean from dirty**. That contrast is why two examples ship.
 ### 7.6 Verifying it
 
 ```powershell
-# 169 backend tests -- whether the physics is right
+# 171 backend tests -- whether the physics is right
 cd backend
 .\.venv\Scripts\python.exe -m pytest -q
 
@@ -1072,6 +1158,10 @@ measurement.** All four looked obviously right beforehand.
 
 ### 9.3 What was not verified
 
+- **The standalone executable has never run where Python is absent.** It is
+  built to (Python is inside the file) and it works perfectly here, but this
+  machine has Python installed, so that is not evidence. **Copying it to
+  another machine and opening it closes this item in five minutes.**
 - **The Docker image has never been built.** Docker Desktop is not installed.
   The Phase 7 gate in `tasks.md` says exactly what was checked instead.
 - **There is no Git remote.** Leaving OneDrive ended automatic backup and
@@ -1149,9 +1239,13 @@ claude --resume                          # continue an earlier one
 .\dev.ps1                                # both servers, and open the page
 
 # ---- verifying ----
-cd backend; .\.venv\Scripts\python.exe -m pytest -q     # 169 tests
+cd backend; .\.venv\Scripts\python.exe -m pytest -q     # 171 tests
 cd frontend; npm run test:e2e                           # 24 tests
 cd frontend; npm run shots                              # screenshots
+
+# ---- building something to give away ----
+.\packaging\build.ps1            # one file    (54 MB, starts in 12.6 s)
+.\packaging\build.ps1 -OneDir    # zipped dir  (55 MB, starts in  5.0 s)
 
 # ---- after changing the backend ----
 cd frontend; npm run gen:api    # regenerate types from the server on :8000
