@@ -1,7 +1,8 @@
 # Project Constitution — Nodeless SC Gap Extractor
 
-**Version:** 1.0.0
+**Version:** 1.1.0
 **Ratified:** 2026-08-22
+**Amended:** 2026-08-25 — VIII gains an exemption for teaching material
 **Status:** Active
 
 These are the non-negotiable rules of this project. They outrank convenience,
@@ -139,6 +140,20 @@ are written in English. Text displayed in the browser is written in Korean.
 Korean UI strings live in the frontend only. No general internationalisation
 framework is used; if a second display language is ever required, that is a
 future amendment, not a present cost.
+
+**Exemption (added 1.1.0).** Material written to teach the maintainer rather
+than to instruct whoever changes the code is written in the language its reader
+reads, and lives under `docs/` and nowhere else. The exemption reaches nothing
+outside that directory: `specs/`, `README.md`, `CLAUDE.md`, source code,
+identifiers, and commit messages stay English, because they are read by whoever
+edits the code, by a future contributor, and by tools.
+
+**Why.** The rule above exists to stop two languages from interleaving in one
+file and to keep error handling testable, not to stop the maintainer from
+having notes he can read. A teaching document held to English is a document
+that does not get written, or gets written and not read; either way the rule
+would be costing more than it protects. Confining the exemption to one
+directory keeps the boundary checkable by eye.
 
 ---
 

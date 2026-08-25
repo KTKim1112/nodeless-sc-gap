@@ -95,8 +95,9 @@ give gaps about 20 % apart, so which one was used has to be reported.
     backend/app/core/                 the physics. No web framework, ever
     backend/app/                      the HTTP layer over it
     backend/tests/                    166 tests
-    frontend/src/                     the page. Korean text lives only here
+    frontend/src/                     the page. Its Korean lives here
     frontend/e2e/                     the acceptance walkthrough, executed
+    docs/                             how this was built, for the maintainer
     legacy/                           the archived command-line prototypes
 
 `backend/app/core/` imports no web framework and does no I/O, and a test
@@ -126,3 +127,7 @@ safeguard with the measurements behind them. Where implementation contradicted
 the specification -- the quadrature rule, the residual definition, the
 model-comparison criterion -- the specification was corrected first and the
 reason recorded. `git log` is the argument for each.
+
+`docs/manual.ko.md` narrates the whole of it -- what was installed, what each
+phase did, and what came out -- for a reader with no programming background. It
+is in Korean, which constitution VIII permits under `docs/` alone.

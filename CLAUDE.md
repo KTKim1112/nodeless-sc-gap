@@ -35,7 +35,10 @@ measured points were moved to the backend for exactly this reason.
 ## Conventions
 
 - **Code, comments, documents, commit messages: English. Screen text: Korean.**
-  The only file containing Korean prose is `frontend/src/errorMessages.ts`.
+  Korean prose lives in exactly two places: `frontend/src/errorMessages.ts`, and
+  `docs/`, which constitution VIII 1.1.0 exempts because it teaches the
+  maintainer rather than instructing whoever changes the code. Nowhere else --
+  a Korean sentence anywhere under `specs/`, `backend/`, or the root is a bug.
 - The backend never returns a sentence for a human. Failures are
   `{"code", "params"}`; `errorMessages.ts` turns a code into a sentence. A test
   asserts no API response contains non-ASCII.
