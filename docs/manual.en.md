@@ -9,8 +9,8 @@ Written so that someone starting from the same place can follow it.
 | --- | --- |
 | Written | 2026-08-25 |
 | For | a reader with no programming background |
-| Elapsed | two days (2026-08-22 to 08-23) |
-| Commits | 10 |
+| Elapsed | four days (2026-08-22 to 08-25) |
+| Commits | 17 |
 
 > The Korean version is [`manual.ko.md`](manual.ko.md). The two carry the same
 > content; constitution VIII permits the Korean one under `docs/` alone.
@@ -24,7 +24,7 @@ Written so that someone starting from the same place can follow it.
 - [02. Prerequisites — what to install and why](#02-prerequisites--what-to-install-and-why)
 - [03. Orca and Claude Code](#03-orca-and-claude-code--which-is-which)
 - [04. SDD — spec-driven development](#04-sdd--spec-driven-development)
-- [05. Phase 0 to 9 — what actually happened](#05-phase-0-to-9--what-actually-happened)
+- [05. Phase 0 to 10 — what actually happened](#05-phase-0-to-10--what-actually-happened)
 - [06. What one turn looks like](#06-what-one-turn-looks-like)
 - [07. The result](#07-the-result)
 - [08. Doing it again — a checklist](#08-doing-it-again--a-checklist)
@@ -90,7 +90,7 @@ Before the detail, the shape. Three blocks.
 | --- | --- | --- |
 | **Prepare** | Install six tools and connect an account | Typing `claude` in a terminal gets an answer |
 | **Specify** | Write seven documents without writing a line of code | "What is being built and why" fixed in prose. Two physics errors were caught here |
-| **Build** | Phases 1 to 9, each behind a gate | A program running in a browser with 195 tests passing |
+| **Build** | Phases 1 to 10, each behind a gate | A program running in a browser with 201 tests passing |
 
 > **Why this order**
 >
@@ -447,7 +447,7 @@ where it went wrong.
 
 ---
 
-## 05. Phase 0 to 9 — what actually happened
+## 05. Phase 0 to 10 — what actually happened
 
 What follows is the record. Ten commits correspond to the stages. The **what
 actually happened** paragraphs are the most valuable part of this manual: the
@@ -763,6 +763,64 @@ between choosing a port and listening on it.
   evidence about a clean one. The same gap as the Docker image in Phase 7, and
   it closes the same way: copy it to another machine and open it.
 
+### Phase 10 — the Jc(T) the fit predicts
+
+A feature added to a tool already in use. The two plots showed how well the fit
+follows the *derived* quantities, and nothing compared it against Jc itself —
+the one number the user actually supplied.
+
+**This is where the symmetry breaks.** The superfluid density and penetration
+depth curves need only the three fitted parameters, so they can be sampled at
+any temperature from absolute zero up. Recovering Jc through equation (1) needs
+the coherence length **as well as** the penetration depth.
+
+| How xi is established | Is xi known at any temperature? |
+| --- | --- |
+| Fixed kappa | **Yes** — xi = lambda_model(T)/kappa, from the fit alone |
+| From Hc2 | **No** — Bc2 exists only where it was measured |
+| Supplied xi | **No** — same reason |
+
+In two of the three there is no way to fill the space between measurements.
+Filling it would mean assuming a form for Bc2(T), which section 9 of the
+specification puts explicitly out of scope. So the prediction is computed at the
+measured temperatures in all three modes — one branch instead of three, and no
+assumption the analysis has not already stated. At the 22 and 25 points of the
+shipped examples the polyline is indistinguishable from a curve. At five points
+it would look angular, which is an honest thing for it to look like.
+
+**That choice made the export easy.** One value per measurement means it fits
+in the table that already has one row per measurement. No second file, unlike
+the curve of Phase 8, and it sits beside the measured Jc, because plotting one
+against the other is the reason the column exists.
+
+> **The same quantity computed twice will eventually disagree**
+>
+> The direct route's residual is defined as `ln(Jc_data) - ln(Jc_model)`. The
+> newly reported prediction is therefore **the same quantity that residual
+> already measured**.
+>
+> So both now leave a single function, and the test asserts **exact equality**
+> rather than approximate agreement. "Nearly equal" there would mean a second
+> expression for one quantity had appeared somewhere, and two such expressions
+> drift apart sooner or later.
+>
+> It cost something. Route A never looks at Jc while it is fitting and had no
+> reason to hold a coherence length; it carries one now purely so the prediction
+> exists for that route too. Computing it in `pipeline.py` after the fit would
+> have touched less code and left that identity as a coincidence to be
+> maintained by hand.
+
+> **Nothing but looking at the picture would have caught it**
+>
+> The first screenshot of the new tab labelled the axis `10B`, which is how
+> Plotly abbreviates ten to the tenth. A billion is a word with two meanings and
+> this axis carries a unit, so the ticks are powers of ten instead. Every test
+> passed while it was wrong.
+
+- **Gate** — the prediction and the direct route's residual are one quantity,
+  not two that agree. Met, and checked as equality rather than to a tolerance.
+  176 backend plus 25 end-to-end tests.
+
 ---
 
 ## 06. What one turn looks like
@@ -836,9 +894,9 @@ order are all fixed.
 
 | | |
 | --- | --- |
-| Commits | 10 |
-| Backend tests | 171 |
-| Browser tests | 24 |
+| Commits | 17 |
+| Backend tests | 176 |
+| Browser tests | 25 |
 | API endpoints | 10 |
 | Requirements | 30, each mapped to a task |
 | Built-in examples | 2 |
@@ -884,7 +942,7 @@ nodeless-sc-gap/
 │   │   ├── schemas.py        the wire format. Units convert only here
 │   │   ├── resources.py      where its own files are: installed or packaged
 │   │   └── desktop.py        entry point for the standalone build
-│   ├── tests/                14 files, 171 tests
+│   ├── tests/                14 files, 176 tests
 │   └── examples/             two built-in examples and their generator
 │
 ├── packaging/                building the distributable .exe
@@ -991,10 +1049,25 @@ plot. That curve can be downloaded as numbers with the second CSV button
 (`nodeless_sc_curve.csv`), which is the file to use when replotting it in
 Origin or Excel beside your own measurements.
 
+![The critical current density](images/04b-chart-jc.png)
+
+**Critical current density `Jc(T)`.** What was supplied, and what the fitted
+parameters predict for it. The two plots above show *derived* quantities; this
+is the only one that compares against the measurement itself. Both columns are
+in the result CSV, side by side: `Jc_A_per_m2` and `Jc_model_A_per_m2`.
+
+Unlike the other two it is drawn only at the measured temperatures. Equation (1)
+needs `xi` as well as `lambda`, and `xi` comes from the fit only in fixed-kappa
+mode; in the other two it exists only where a measurement supplied it. Filling
+the space between would mean assuming a form for `Bc2(T)`, which is physics this
+tool has declined to do.
+
 ![The residuals](images/04b-chart-residuals.png)
 
 **Residuals.** A systematic departure hiding behind a small chi-squared is
-visible only here. This tab exists to show what a single number cannot.
+visible only here. This tab exists to show what a single number cannot. On the
+direct route these residuals are exactly the gap between the two curves above —
+`ln(Jc_data) - ln(Jc_model)` — and they come from the same function.
 
 ![Assumptions and cautions](images/06-models-indistinguishable.png)
 
@@ -1032,11 +1105,11 @@ separate clean from dirty**. That contrast is why two examples ship.
 ### 7.6 Verifying it
 
 ```powershell
-# 171 backend tests -- whether the physics is right
+# 176 backend tests -- whether the physics is right
 cd backend
 .\.venv\Scripts\python.exe -m pytest -q
 
-# 24 browser tests -- starts both servers and drives the real page
+# 25 browser tests -- starts both servers and drives the real page
 cd frontend
 npm run test:e2e
 
@@ -1239,7 +1312,7 @@ claude --resume                          # continue an earlier one
 .\dev.ps1                                # both servers, and open the page
 
 # ---- verifying ----
-cd backend; .\.venv\Scripts\python.exe -m pytest -q     # 171 tests
+cd backend; .\.venv\Scripts\python.exe -m pytest -q     # 176 tests
 cd frontend; npm run test:e2e                           # 24 tests
 cd frontend; npm run shots                              # screenshots
 

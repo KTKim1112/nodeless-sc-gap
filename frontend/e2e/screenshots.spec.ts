@@ -42,6 +42,7 @@ test('capture the states worth looking at', async ({ page }) => {
   for (const [tab, name] of [
     ['초전도 밀도 ρs(T)', 'rho-s'],
     ['침투깊이 λ(T)', 'lambda'],
+    ['임계전류밀도 Jc(T)', 'jc'],
     ['잔차', 'residuals'],
   ] as const) {
     await charts.getByRole('tab', { name: tab }).click()
