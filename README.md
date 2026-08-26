@@ -118,6 +118,28 @@ is the more robust of the two.
 So this is a convenience rather than a correction for most data. The reason to
 prefer it is that it removes a number nobody measured.
 
+#### Related work
+
+W. Crump's [BCS-theory-critical-current-fit](https://github.com/WayneCrump/BCS-theory-critical-current-fit)
+fits `Jc(T)` to the same self-field relation, in MATLAB, and is wider than this
+in most directions: type I as well as type II, d-wave as well as s-wave, one
+band and an alpha model and two independent bands and a Uemura coupling, and 2D,
+3D rectangular and wire geometries with anisotropy. It takes `kappa` as one
+fixed number entered per fit -- `kap = log(kappa) + 0.5`, evaluated once -- and
+no upper critical field appears anywhere in it. Read 2026-08-26; it may have
+moved on.
+
+The trade runs both ways. Anyone wanting a d-wave gap, two bands, or a wire
+rather than a film should use that program, because section 9 of the
+specification here declines all three on purpose. What the narrower scope buys
+is the `Hc2(T)` route above, and the room to carry an assumption list, a
+Monte Carlo, and a clean-versus-dirty comparison alongside every number.
+
+This is an independent implementation of the published relation. It was written
+from the equations in the paper, and `specs/001-jc-to-gap/research.md` and the
+commit history record that: the specification and the physics were fixed before
+any code existed.
+
 ### What it does not do
 
 Multi-band or two-gap models, gap models with nodes, anisotropic `Hc2`,
