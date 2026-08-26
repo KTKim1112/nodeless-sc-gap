@@ -71,14 +71,33 @@ fixed Ginzburg-Landau parameter. It reports:
 - `xi`, `lambda` and `kappa` at every measured temperature;
 - fitted `lambda(0)`, `Delta(0)`, `Tc` and `2 Delta(0) / (kB Tc)`, each with a
   standard uncertainty;
-- plots of the superfluid density and the penetration depth with the fitted
-  curve through the measured points, and the residuals;
+- plots of the superfluid density, the penetration depth and the critical
+  current density, each with the fit drawn through the measured points, and the
+  residuals;
 - optionally, the measurement uncertainty propagated through the whole chain by
   Monte Carlo;
 - and, alongside every result, the assumptions it rests on and any that the data
   appear to violate.
 
 Two built-in examples run the whole thing without any data of your own.
+
+### When this is the right tool
+
+Self-field **transport** `Jc(T)`, from a **thin film** free of weak links,
+comfortably **strong type-II**, whose gap is **single-band, nodeless and
+s-wave**. Those four are restrictions: a sample failing any of them wants a
+different program, and *Related work* below names the obvious one.
+
+The fifth item on the list is not a restriction but the reason to reach for this
+one. If `Hc2(T)` was measured in the same cooldown -- and it usually was, on the
+same sample, in the same run -- then `xi(T)` is read off it at every temperature
+instead of being replaced by a single fixed `kappa`. The temperature dependence
+of the coherence length comes out of the measurement rather than being assumed
+away.
+
+**`Hc2` is not required.** An independently known `xi(T)` does the same job, and
+so does a fixed `kappa`. What that last choice costs is measured and tabulated
+below rather than left for the reader to worry about.
 
 ### The coherence length is measured, not assumed
 
@@ -118,7 +137,7 @@ is the more robust of the two.
 So this is a convenience rather than a correction for most data. The reason to
 prefer it is that it removes a number nobody measured.
 
-#### Related work
+### Related work
 
 W. Crump's [BCS-theory-critical-current-fit](https://github.com/WayneCrump/BCS-theory-critical-current-fit)
 fits `Jc(T)` to the same self-field relation, in MATLAB, and is wider than this
@@ -129,10 +148,11 @@ fixed number entered per fit -- `kap = log(kappa) + 0.5`, evaluated once -- and
 no upper critical field appears anywhere in it. Read 2026-08-26; it may have
 moved on.
 
-The trade runs both ways. Anyone wanting a d-wave gap, two bands, or a wire
-rather than a film should use that program, because section 9 of the
-specification here declines all three on purpose. What the narrower scope buys
-is the `Hc2(T)` route above, and the room to carry an assumption list, a
+The trade runs both ways, and the four restrictions listed under *When this is
+the right tool* are what decides it: a d-wave gap, two bands, or a wire rather
+than a film are exactly the cases section 9 of the specification declines here
+on purpose, and exactly the cases that program covers. What the narrower scope
+buys is the `Hc2(T)` route above, and the room to carry an assumption list, a
 Monte Carlo, and a clean-versus-dirty comparison alongside every number.
 
 This is an independent implementation of the published relation. It was written
