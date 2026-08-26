@@ -35,12 +35,21 @@ the page and the API.
 
 For a recipient with no Python, no Node, and no administrator rights: they open
 it, a browser opens on a port the operating system picked, and closing the
-console window stops it. 54 MB as one file and 12.6 s to start, against 55 MB
-zipped and 5.0 s; the difference is the bootloader unpacking itself on every
-launch.
+console window stops it. Confirmed on a second machine, where the browser came
+up on its own and a real dataset gave the same numbers as the source build.
 
-It has never been run on a machine without Python. See the Phase 9 gate in
-`specs/001-jc-to-gap/tasks.md` for what was checked instead.
+54 MB as one file and 12.6 s to start, against 55 MB zipped and 5.0 s; the
+difference is the bootloader unpacking 54 MB into a temporary directory on
+every launch.
+
+**Antivirus software objects to the one-file build.** Observed, not predicted:
+it was flagged on the machine it was carried to, and ran once allowed through.
+Unpacking an executable into a temporary directory and running it from there is
+also what a dropper does, and a heuristic cannot tell the difference; UPX
+compression is already off in `packaging/NodelessSC.spec` for the same reason.
+The one-folder build does not unpack anything at startup, so prefer `-OneDir`
+for anything handed to someone else, and expect to tell them why the warning
+appears. Nothing short of a code-signing certificate removes it entirely.
 
 ### For development
 

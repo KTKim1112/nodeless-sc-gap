@@ -850,10 +850,18 @@ between choosing a port and listening on it.
 - **Gate** — 171 backend tests, and the executable returns what the source
   build returns: `lambda(0) = 250.0422 nm`, `Delta(0) = 1.40030 meV`,
   `Tc = 9.2002 K`, `2 Delta(0)/kB Tc = 3.5325`.
-- **Not met, and it is the part that matters** — whether it runs where Python
-  is **absent**. This machine has Python installed, so nothing observed here is
-  evidence about a clean one. The same gap as the Docker image in Phase 7, and
-  it closes the same way: copy it to another machine and open it.
+- **Confirmed on another machine** (2026-08-26) — carried over and opened: the
+  browser came up by itself, and the maintainer's **own measured data**, not a
+  shipped example, gave the same result as the source build. Nothing had to be
+  installed there. Whether that machine had Python was not asked, so the
+  stronger claim is not made here.
+- **What the trip found instead** — **antivirus software flags it.** It runs
+  once allowed through, but a recipient who was not warned deletes the file. A
+  one-file build unpacks 54 MB into a temporary directory at every launch and
+  runs from there, which is the shape of a dropper and indistinguishable from
+  one by inspection. A one-folder build unpacks nothing, so **one file against
+  one folder is no longer a question about startup time**; it is a question
+  about the scanner ([section 7.3.1](#731-giving-it-to-somebody-else)).
 
 ### Phase 10 — the Jc(T) the fit predicts
 
@@ -1084,14 +1092,34 @@ Builds a file that needs nothing installed on the receiving machine.
 .\packaging\build.ps1 -OneDir    # one folder, packaging\dist\NodelessSC-windows.zip
 ```
 
-| | Size | Startup | What the recipient does |
-| --- | --- | --- | --- |
-| One file | 54 MB | 12.6 s | Double-click it |
-| Zipped folder | 55 MB | 5.0 s | Unzip, then double-click the `.exe` inside |
+| | Size | Startup | Antivirus | What the recipient does |
+| --- | --- | --- | --- | --- |
+| One file | 54 MB | 12.6 s | **Objects** | Double-click it |
+| Zipped folder | 55 MB | 5.0 s | Quiet | Unzip, then double-click the `.exe` inside |
 
 Double-clicking opens a console window, and a browser follows a moment later.
 **Closing the console stops the program** — it is the only stop button the
 recipient has, which is why it is not hidden.
+
+> **Expect the antivirus warning, and warn the recipient first**
+>
+> The one-file build was flagged on the machine it was carried to. It ran once
+> allowed through, but somebody who was not told to expect this deletes the
+> file and reports that the program is broken.
+>
+> The scanner is not wrong to be suspicious. A one-file build unpacks 54 MB
+> into a temporary directory at every launch and runs from there, which is
+> exactly the shape of a dropper. Nothing about the file says which it is. UPX
+> compression is already switched off in the build spec because it is another
+> such signal.
+>
+> **The one-folder build does not unpack anything at startup, so it does not
+> trip this.** That is now the better reason to prefer it — better than the
+> 12.6 s against 5.0 s that the original measurement turned on. Send the zip.
+>
+> Removing the warning properly means signing the executable with a purchased
+> certificate. That was not done, so this stays a thing to explain rather than
+> a thing that is fixed.
 
 > **How this differs from Docker**
 >
@@ -1335,14 +1363,30 @@ measurement.** All four looked obviously right beforehand.
 
 ### 9.3 What was not verified
 
-- **The standalone executable has never run where Python is absent.** It is
-  built to (Python is inside the file) and it works perfectly here, but this
-  machine has Python installed, so that is not evidence. **Copying it to
-  another machine and opening it closes this item in five minutes.**
 - **The Docker image has never been built.** Docker Desktop is not installed.
-  The Phase 7 gate in `tasks.md` says exactly what was checked instead.
-- **There is no Git remote.** Leaving OneDrive ended automatic backup and
-  nothing has replaced it. If this machine fails, the repository is gone.
+  The Phase 7 gate in `tasks.md` says exactly what was checked instead. It is
+  now the **only** item left on this list.
+- **Whether the machine the executable was carried to had Python on it was not
+  asked.** It ran, which the closed item below records; but "Python is not
+  needed" is a claim that observation does not by itself establish.
+
+#### Closed, and how
+
+- **The standalone executable runs on another machine.** (2026-08-26) Carried
+  over and opened: the browser came up by itself, and **the maintainer's own
+  measured data** — not one of the shipped examples — gave the same result as
+  the source build. Nothing had to be installed there first.
+
+  It turned up something not predicted: **antivirus software flags it.** It
+  runs once allowed through, but somebody who was not warned deletes the file
+  instead. What causes it and what to do is in
+  [section 7.3.1](#731-giving-it-to-somebody-else). That finding is worth more
+  in practice than the confirmation that prompted it.
+
+- **There is a Git remote.** (2026-08-26)
+  <https://github.com/KTKim1112/nodeless-sc-gap> — public, MIT. The automatic
+  backup lost on leaving OneDrive is replaced, `git push` is the whole ritual,
+  and the repository survives this machine.
 
 ### 9.4 Working habits
 

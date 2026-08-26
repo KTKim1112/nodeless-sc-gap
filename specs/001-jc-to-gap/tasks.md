@@ -260,11 +260,37 @@ build returns. **Met on this machine**: `lambda(0) = 250.0422 nm`,
 curve's first row is `T = 0` at `250.042240 nm` — identical to
 `python -m app.desktop`. 171 backend tests pass.
 
-**Not met, and it is the part that matters**: whether it runs where Python is
-absent. This machine has Python, Node, and the project's own virtual
-environment, so nothing observed here is evidence about a clean one. The same
-gap as the Docker image in Phase 7, and it closes the same way — copy it to
-another machine and open it.
+**Met on a second machine, 2026-08-26.** The executable was carried to another
+computer and opened. The browser came up by itself, and the maintainer's own
+measured `Jc(T)` — not one of the shipped examples — produced the same result
+there as it does from source. Nothing on that machine had to be installed
+first.
+
+One thing that was not asked at the time and so is not claimed: whether that
+machine had Python on it. The point of the build is that it should not matter,
+and everything else about the run is consistent with that, but the observation
+does not by itself establish it.
+
+**What the trip found instead.** Antivirus software objected to the one-file
+executable, and it ran after being allowed through. This was not predicted and
+is the more useful result of the two: a recipient who does not know to expect
+the warning is a recipient who deletes the file.
+
+The cause is the design of a one-file build. It unpacks 54 MB into a temporary
+directory at every launch and executes from there, which is also the shape of a
+dropper, and a heuristic scanner has no way to distinguish them. UPX was
+already off for exactly this reason (`packaging/NodelessSC.spec`), and turning
+off the one remaining trigger means not unpacking at startup at all — which is
+what `-OneDir` does.
+
+So the one-file versus one-folder choice is no longer only about startup time.
+It now reads: one file is more convenient to send and more likely to be
+quarantined; one folder starts faster and does not trip the scanner. Both stay
+buildable, and `README.md` recommends `-OneDir` for anything given away.
+
+Code signing would remove the warning properly. It needs a certificate, which
+costs money and is not obtainable from this machine, so it is recorded here as
+the known fix rather than done.
 
 Two measurements decided the shape of the build.
 
