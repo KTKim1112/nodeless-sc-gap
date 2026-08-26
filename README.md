@@ -80,6 +80,44 @@ fixed Ginzburg-Landau parameter. It reports:
 
 Two built-in examples run the whole thing without any data of your own.
 
+### The coherence length is measured, not assumed
+
+Equation (1) needs `xi(T)` as well as `lambda(T)`. The simplest way to supply it
+is to fix the Ginzburg-Landau parameter `kappa = lambda/xi` and let `xi` follow
+`lambda`, and this tool will do that. It also accepts `Hc2(T)`, from which
+`xi(T) = sqrt(PHI0 / (2 pi Bc2(T)))` at every measured temperature, so that
+`kappa(T)` comes out as a **result** that can be looked at rather than going in
+as an assumption.
+
+That matters for two reasons, one practical and one numerical.
+
+The practical one is that `Hc2` comes out of the same four-probe transport
+measurement as `Jc`, on the same sample, in the same cooldown. `kappa` does not
+come from anywhere: fixing it means already knowing the ratio of the two
+lengths this analysis exists to determine.
+
+The numerical one is smaller than it looks, and is stated here rather than
+implied. Synthetic `Jc(T)` was generated at `lambda(0) = 250 nm`,
+`Delta(0) = 1.400 meV`, `Tc = 9.2 K` for three temperature dependences of
+`Bc2`, then fitted both ways:
+
+| `Bc2(T)` | `kappa` range | from `Hc2` | fixed `kappa`, at its mean |
+| --- | --- | --- | --- |
+| `1 - (T/Tc)^2`, the usual form | 43.4 – 45.6, 1.05x | exact | `Delta(0)` low by 0.36 % |
+| `1 - T/Tc` | 32.0 – 44.4, 1.39x | exact | low by 2.99 % |
+| `(1 - (T/Tc)^2)^2` | 17.0 – 45.6, 2.69x | exact | low by 4.31 % |
+
+Reading `xi(T)` off `Hc2` recovers the generating parameters whatever `kappa`
+does. Fixing `kappa` costs a few tenths of a per cent when `kappa` is nearly
+constant, which is the ordinary case, and a few per cent when it is not.
+`kappa` enters equation (1) only inside a logarithm, which is why even a
+`kappa` wrong by half still moves `lambda(0)` by only about 3 %, and why
+`Delta(0)` — which depends on the *shape* of `rho_s(T)` and not on its scale —
+is the more robust of the two.
+
+So this is a convenience rather than a correction for most data. The reason to
+prefer it is that it removes a number nobody measured.
+
 ### What it does not do
 
 Multi-band or two-gap models, gap models with nodes, anisotropic `Hc2`,
@@ -146,3 +184,21 @@ reason recorded. `git log` is the argument for each.
 phase did, and what came out -- for a reader with no programming background.
 `docs/manual.ko.md` is the same document in Korean, which constitution VIII
 permits under `docs/` alone.
+
+---
+
+## Licence and attribution
+
+MIT, in `LICENSE`. Use it, change it, publish it; keep the notice; no warranty.
+
+The physics is Talantsev and Tallon's, and this is an independent
+implementation of the published relation rather than a derivative of any
+existing code. Their paper is open access under CC BY 4.0:
+
+> E. F. Talantsev and J. L. Tallon, *Universal self-field critical current for
+> thin-film superconductors*, Nature Communications **6**, 7820 (2015).
+> DOI [10.1038/ncomms8820](https://doi.org/10.1038/ncomms8820)
+
+`specs/001-jc-to-gap/research.md` cites the source of every equation and
+constant, including Tinkham for the dirty-limit superfluid density. Dependencies
+are BSD, MIT, or Apache-2.0 throughout; none imposes conditions on this code.
