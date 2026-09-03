@@ -866,3 +866,83 @@ whatever functional form was chosen, which is precisely the assumption about
 therefore stops where the data stop, and the difference is visible on the plot:
 under `FIXED_KAPPA` the same curve runs from absolute zero to `Tc`, because
 there the coherence length was assumed rather than measured.
+
+---
+
+## R13. Extending the `Jc(T)` curve past the data, and why it is not done
+
+R12 fills `xi` between the measurements. The obvious next question is whether
+the curve can be carried to absolute zero and to `Tc`, so that it covers the
+range `rho_s` and `lambda` do. It was measured rather than argued about, and
+then declined. This section records the numbers so that the question does not
+have to be reopened by re-deriving them.
+
+### R13.1 The three ways to supply `xi` outside the data
+
+  A. hold `kappa` at its value at the nearest measured edge, so `xi` follows
+     the model's own `lambda`
+  B. hold `Bc2` at its value at the nearest edge, so `xi` is frozen
+  C. fit `Bc2(T) = Bc2(0) (1 - (T/Tc)^2)` to the measured points and use it
+
+Judged on the relative error in the drawn `Jc`, worst case, separately below
+the coldest measurement and above the hottest. Data over `0.2 Tc` to `0.9 Tc`,
+8 points, `lambda(0) = 250 nm`, `Delta(0) = 1.400 meV`, `Tc = 9.2 K`:
+
+| `Bc2(T)` | `kappa` over the data | A cold | A hot | B cold | B hot | C cold | C hot |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `1 - t^2` | 41.4 – 42.7 | 0.47 % | 1.04 % | 0.48 % | 53 % | 0.00 % | 0.00 % |
+| `1 - t` | 30.6 – 39.0 | 2.60 % | 0.47 % | 2.61 % | 59 % | 3.80 % | 4.67 % |
+| `(1 - t^2)^2` | 18.4 – 41.9 | 0.94 % | 190 % | 0.96 % | 387 % | 2.54 % | 254 % |
+
+A is the best of the three and is not an arbitrary choice: in Ginzburg-Landau
+both lengths diverge as `(1 - T/Tc)^(-1/2)` towards `Tc`, so their ratio tends
+to a constant, and both saturate towards absolute zero. Holding `kappa` is the
+limit the theory gives at each end. B is wrong at `Tc` by tens of per cent
+because `xi` must diverge there and freezing it forbids that. C is the
+assumption section 9 of the specification declines, and is exact only when the
+data happen to obey the form it assumes.
+
+### R13.2 What predicts when A fails
+
+The failure is confined to the hot end, and to data whose `kappa` is still
+moving where the measurements stop. The spread of `kappa` across the range is
+a poor predictor -- `1 - t` spreads by 1.27x and extrapolates to 0.47 %, while
+`(1 - t^2)^1.25` spreads by 1.24x and reaches 15 %. What separates them is the
+trend at the edge: how far `kappa` would move from the hottest measurement to
+`Tc` if the slope of the hottest third of the data continued.
+
+| `Bc2(T)` | `kappa` spread | projected change to `Tc` | error, hot end |
+| --- | --- | --- | --- |
+| `(1 - t^2)^0.5` | 1.49x | +13 % | 20.3 % |
+| `1 - t^2` | 1.03x | +1 % | 1.04 % |
+| `1 - t` | 1.27x | -2 % | 0.47 % |
+| `(1 - t^2)^1.25` | 1.24x | -5 % | 15.0 % |
+| `(1 - t^2)^1.5` | 1.52x | -10 % | 40.2 % |
+| `(1 - t^2)^2` | 2.28x | -20 % | 190 % |
+
+A threshold of 3 % on that projected change separates the cases cleanly, fires
+on every one that should, stays silent at 1 % scatter on `Bc2`, and produces
+about 20 % false alarms at 3 % scatter on the borderline `1 - t` case.
+
+### R13.3 Why it is declined anyway
+
+The measurement above is what settled it, in an unexpected direction. The
+extrapolation is accurate to about 1 % exactly when `kappa` is nearly constant
+across the data -- and that case already has its own mode, `FIXED_KAPPA`, which
+does the same thing deliberately and says so. It is wrong by tens to hundreds
+of per cent exactly when `kappa` varies with temperature, which is the case
+this tool exists for and the one thing it does that a fixed-`kappa` fit cannot.
+
+So the feature is accurate where it is unnecessary and wrong where it would be
+wanted. That is not a trade to be tuned; it is a reason not to have it.
+
+Two further considerations point the same way. No fitted quantity depends on
+the extension: `lambda(0)`, `Delta(0)` and `Tc` all come from the measured
+range, so the extension is decoration. And making the decoration safe took a
+diagnostic, a threshold, an extra exported column, a second plot trace and a
+sentence of explanation -- five pieces of machinery whose only purpose was to
+stop a picture from misleading. That the safeguards outweighed the feature is
+itself the argument.
+
+The curve therefore stops where the data stop, and the honest answer to "what
+does `Jc` do near `Tc`?" remains "measure `Bc2` closer to `Tc`".

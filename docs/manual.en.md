@@ -986,6 +986,40 @@ never `0` and never `nan`. A spreadsheet reads a blank as missing and a number
 as a measurement, and a zero at a temperature the analysis declined to speak
 about would end up in someone's figure.
 
+> **A feature that was built and then taken back out**
+>
+> The next question after this one is the obvious one: why not carry the curve
+> to absolute zero and to `Tc`, like the two beside it?
+>
+> **It was built.** Past the measurements `xi` came from holding `kappa` at its
+> edge value -- the Ginzburg-Landau limit, where both lengths diverge the same
+> way towards `Tc` -- with that stretch drawn dashed, a warning raised when the
+> data's own `kappa` trend said the assumption was unsafe, and a flag column in
+> the exported curve.
+>
+> **Then it was removed**, because the measurement pointed the other way.
+>
+> | The data's `kappa` | Error at the hot end |
+> | --- | --- |
+> | nearly constant | 1 % |
+> | varying with temperature | **190 %** |
+>
+> It is accurate when `kappa` is nearly constant -- and that case already has
+> its own mode, which makes the same assumption deliberately and says so. It is
+> badly wrong when `kappa` varies with temperature, which is the case this tool
+> exists for. Accurate where it is unnecessary, wrong where it would be wanted:
+> not a trade to be tuned, but a reason not to have it.
+>
+> The signs were there while it was being written. No fitted quantity depends
+> on the extension -- `lambda(0)`, `Delta(0)` and `Tc` all come from the
+> measured range -- so it was decoration; and keeping the decoration from
+> misleading took five separate pieces of machinery. When the safeguards
+> outweigh the feature, that is the answer.
+>
+> The measurement is kept as research R13, so that in six months the question
+> can be closed by reading a table rather than by deriving it again. That is
+> what the specification documents are for.
+
 - **Gate** — the `Jc` tab shows a fitted curve, and the curve and the reported
   per-point column are one model rather than two. **Met**: a test evaluates the
   curve's own recipe at the measured temperatures and gets the reported column

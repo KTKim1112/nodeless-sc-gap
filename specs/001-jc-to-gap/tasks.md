@@ -443,6 +443,29 @@ measured values instead, so the curve leaves the frame rather than the data
 leaving the eye, and `06b-chart-jc-fixed-kappa.png` is in the screenshot set so
 that this stays visible.
 
+*Asked for, built, measured, and taken back out.* The next question after this
+phase was whether the curve could reach absolute zero and `Tc` like the two
+beside it, and it was implemented: `xi` past the data by holding `kappa` at its
+edge value, the extrapolated part dashed, a `KAPPA_TREND_EXTRAPOLATED` warning
+when the data's own trend said that assumption was unsafe, and a flag column in
+the exported curve.
+
+It was then removed, on the strength of what the measurement said. Research R13
+has the tables. The short version is that holding `kappa` is accurate to about
+1 % exactly when `kappa` is nearly constant -- a case that already has its own
+mode, which does the same thing on purpose -- and wrong by tens to hundreds of
+per cent exactly when `kappa` varies with temperature, which is the case this
+tool exists for. Accurate where it is unnecessary, wrong where it would be
+wanted.
+
+Two things are worth carrying forward from the attempt. Nothing fitted depends
+on the extension, so it was decoration; and making the decoration safe took a
+diagnostic, a threshold, an export column, a second plot trace and a sentence
+of explanation. When the safeguards outweigh the feature, that is the answer.
+
+The measurement is kept in R13 so the question can be closed by reading rather
+than by re-deriving it.
+
 ---
 
 ## Requirement coverage
