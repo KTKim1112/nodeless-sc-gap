@@ -170,9 +170,9 @@ class FitResult:
     #: only the fit can produce it.
     rho_s_measured: FloatArray
     #: Equation (1) at the fitted parameters, at each measured temperature, in
-    #: input order (A/m^2). On the measurements rather than on a dense grid
-    #: because equation (1) needs xi, which outside FIXED_KAPPA exists only
-    #: where a measurement supplied it (FR-026a).
+    #: input order (A/m^2). One value per measurement, so that it exports beside
+    #: the measured column; `SuperfluidCurve.jc` is the same model drawn as a
+    #: curve, and passes through these points by construction (FR-026a).
     jc_model: FloatArray
     n_points: int
     n_free_parameters: int
@@ -187,6 +187,12 @@ class SuperfluidCurve:
     temperature_K: FloatArray
     rho_s: FloatArray
     lambda_: FloatArray
+    #: Equation (1) along the same grid (A/m^2). NaN wherever the coherence
+    #: length is not available without an added assumption, which under
+    #: FROM_HC2 and EXPLICIT_XI is everywhere outside the span of the
+    #: measurements (FR-026a). Under FIXED_KAPPA the whole grid is populated,
+    #: because there xi follows the fit.
+    jc: FloatArray
 
 
 # --- diagnostics -------------------------------------------------------------

@@ -255,7 +255,7 @@ test('the fitted curve can be downloaded and starts on the reported intercept',
     for await (const chunk of stream) chunks.push(chunk as Buffer)
     const csv = Buffer.concat(chunks).toString('utf8')
 
-    expect(csv).toContain('T_K,rho_s_model,lambda_model_nm')
+    expect(csv).toContain('T_K,rho_s_model,lambda_model_nm,Jc_model_A_per_m2')
     // Constitution VI: this file may be opened without the other one.
     expect(csv).toContain('SELF_FIELD_TRANSPORT_REQUIRED')
 
@@ -268,6 +268,13 @@ test('the fitted curve can be downloaded and starts on the reported intercept',
     expect(t0).toBe(0)
     expect(rho0).toBe(1)
     expect(lam0).toBeCloseTo(intercept, 2)
+
+    // FR-026a: this example is fitted from Hc2, so the model Jc exists only
+    // between the coldest and hottest measurement. Absolute zero is outside
+    // that, and the cell there is blank rather than zero -- a spreadsheet
+    // reads a blank as missing and a zero as a measured value.
+    expect(rows[0].split(',')[3]).toBe('')
+    expect(rows.some(r => r.split(',')[3] !== '')).toBe(true)
   })
 
 // --- FR-026, FR-019: the plots ----------------------------------------------
@@ -288,7 +295,7 @@ test('all four plots draw', async ({ page }) => {
   }
 })
 
-test('the Jc plot shows the measurement and the prediction together',
+test('the Jc plot shows the measurement and the fitted curve together',
   async ({ page }) => {
     await loadExample(page, 'nbti_like')
     await analyse(page)
@@ -300,9 +307,10 @@ test('the Jc plot shows the measurement and the prediction together',
     await expect(charts.locator('.js-plotly-plot .scatterlayer .trace')).toHaveCount(2)
     await expect(charts.getByText('측정', { exact: true })).toBeVisible()
 
-    // FR-026a: the hint has to say why this plot is not a smooth curve, since
-    // the two tabs beside it are and the difference is not self-explanatory.
-    await expect(charts.getByText(/측정한 온도에서만/)).toBeVisible()
+    // FR-026a: the hint has to say why this curve stops where the measurements
+    // do while the two beside it run from absolute zero to Tc. The example is
+    // fitted from Hc2, so the restriction applies to it.
+    await expect(charts.getByText(/측정 온도 범위 안에서만/)).toBeVisible()
   })
 
 test('the plot offers a PNG download', async ({ page }) => {

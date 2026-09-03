@@ -138,11 +138,14 @@ _ROW_COLUMNS = [
 
 #: The fitted curve, on its own grid. Suffixed `_model` throughout so that a
 #: column cannot be mistaken for a measurement once the two files sit in the
-#: same directory.
+#: same directory. The critical current density column is blank outside the
+#: range the coherence length is known on, which is the only column here that
+#: can be (FR-026a).
 _CURVE_COLUMNS = [
     ("T_K", "temperature_K"),
     ("rho_s_model", "rho_s"),
     ("lambda_model_nm", "lambda_nm"),
+    ("Jc_model_A_per_m2", "jc_A_per_m2"),
 ]
 
 
@@ -188,7 +191,13 @@ def export_curve_csv(result: schemas.AnalyzeResponse) -> Response:
     writer.writerow([header for header, _ in _CURVE_COLUMNS])
     columns = [getattr(result.curve, name) for _, name in _CURVE_COLUMNS]
     for row in zip(*columns):
-        writer.writerow([f"{value:.10g}" for value in row])
+        # An empty cell where the model has no value, rather than a zero or the
+        # word nan: the critical current density is drawn only over the range
+        # the coherence length is known on (FR-026a), and a spreadsheet reads a
+        # blank as missing and anything else as a measurement.
+        writer.writerow(
+            ["" if value is None else f"{value:.10g}" for value in row]
+        )
 
     return _csv_response(buffer.getvalue(), "nodeless_sc_curve.csv")
 

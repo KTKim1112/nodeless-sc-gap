@@ -192,6 +192,52 @@ def test_export_curve_is_the_curve_that_was_plotted(client, example_request):
         assert float(row[2]) == pytest.approx(lam)
 
 
+def test_the_curve_sends_its_gaps_as_null_and_not_as_nan(client, example_request):
+    """FR-026a. The model Jc has no value outside the measured range.
+
+    JSON has no NaN. Python will write the bare token `NaN`, which is valid for
+    itself and rejected by `JSON.parse` in the browser, so a single such gap
+    would leave a blank page rather than a wrong number -- and the whole
+    response, not just the plot. Asserted on the raw text because a parsed body
+    would have turned the token into a float before the test could see it.
+    """
+    text = client.post("/api/analyze", json=example_request).text
+    assert "NaN" not in text and "Infinity" not in text
+
+    curve = client.post("/api/analyze", json=example_request).json()["curve"]
+    jc = curve["jc_A_per_m2"]
+    assert len(jc) == len(curve["temperature_K"])
+    # The example is fitted from Hc2, so there are gaps, and values in between.
+    assert jc[0] is None
+    assert any(v is not None for v in jc)
+
+
+def test_the_exported_curve_leaves_a_blank_where_the_model_has_no_value(
+    client, example_request
+):
+    """A spreadsheet reads an empty cell as missing and a zero as a measurement.
+
+    The critical current density is the only column here that can be blank, and
+    writing `nan` or `0` instead would silently put a number into someone's
+    figure at a temperature the analysis declined to speak about.
+    """
+    analysis = client.post("/api/analyze", json=example_request).json()
+    text = client.post("/api/export/curve.csv", json=analysis).text
+    assert "T_K,rho_s_model,lambda_model_nm,Jc_model_A_per_m2" in text
+    assert "nan" not in text.lower()
+
+    rows = [line.split(",") for line in text.splitlines()
+            if line and not line.startswith("#") and not line.startswith("T_K")]
+    jc_column = [row[3] for row in rows]
+    assert jc_column[0] == ""
+    assert any(cell != "" for cell in jc_column)
+    for cell, sent in zip(jc_column, analysis["curve"]["jc_A_per_m2"]):
+        if sent is None:
+            assert cell == ""
+        else:
+            assert float(cell) == pytest.approx(sent)
+
+
 def test_curve_starts_at_absolute_zero_on_the_reported_intercept(client, example_request):
     """FR-026. The intercept the analysis reports has to be on the curve.
 

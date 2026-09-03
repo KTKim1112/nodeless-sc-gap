@@ -243,29 +243,42 @@ open, and each plot can be saved as an image.
   the intercept the analysis reports is visible on the plot rather than
   inferred from where the curve happens to start.
 - **FR-026a** The system MUST plot the critical current density against
-  temperature, showing the measured values and what the fitted parameters
-  predict for the same measurements together.
+  temperature, showing the measured values and the fitted curve together, on
+  the same terms as FR-026.
 
-  *Why this one is not drawn as a smooth curve.* The predicted critical current
+  *Where that curve is allowed to exist.* The predicted critical current
   density needs the coherence length as well as the penetration depth. Under a
   fixed Ginzburg-Landau parameter the coherence length follows from the fit and
-  is known at every temperature; from an upper critical field or a supplied
-  coherence length it is known only where a measurement was taken, and filling
-  the gaps between them would require assuming a temperature dependence for the
-  upper critical field, which section 9 excludes. The prediction is therefore
-  reported at the measured temperatures in all three cases, so that what is
-  plotted rests on no assumption the analysis has not already stated.
+  the curve MUST be drawn over the whole range the other two are. From an upper
+  critical field or a supplied coherence length it is known only where a
+  measurement was taken, and there the curve MUST be drawn between the coldest
+  and hottest measurement and nowhere else: reaching past them would require
+  assuming a temperature dependence for the upper critical field, which section
+  9 excludes.
 
-  This is what the residuals of the direct extraction route already measure, so
-  the plot and those residuals MUST agree exactly rather than approximately.
+  Between the measurements the coherence length MUST be obtained by
+  interpolation, and the system MUST state on screen that this is what the
+  curve rests on. Interpolating between two measurements is a far weaker claim
+  than extending past the last one, and the difference is why one is done and
+  the other refused.
+
+  *What the curve must not become.* The same model MUST also be reported at
+  each measured temperature, since that is what the results table carries and
+  what the residuals of the direct extraction route measure; the curve and that
+  column MUST be one model sampled twice rather than two expressions of it. The
+  reported values and those residuals MUST agree exactly rather than
+  approximately.
+
+  Where the curve has no value, the system MUST say so as an absence — a gap in
+  the line, an empty cell in a file — and never as a zero.
 - **FR-027** The system MUST let the user save the numerical results as a table
   that spreadsheet software can open, and each plot as an image file. That
   table MUST carry the predicted critical current density beside the measured
   one, since both have one value per measurement.
 - **FR-027a** The system MUST let the user save the fitted curve as numbers on
-  the same terms: a table that spreadsheet software can open, carrying the
-  curve that was drawn and not a different sampling of it, and stating the
-  conditions it was produced under.
+  the same terms: a table that spreadsheet software can open, carrying every
+  curve that was drawn and not a different sampling of any of them, and stating
+  the conditions it was produced under.
 
   *Why this is separate from FR-027.* An image cannot be replotted. A user
   preparing a figure needs the model curve as numbers to draw it beside their

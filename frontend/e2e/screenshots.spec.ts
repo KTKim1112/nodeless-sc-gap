@@ -70,6 +70,16 @@ test('capture the states worth looking at', async ({ page }) => {
   await expect(assumptions).not.toContainText('Ginzburg-Landau') // not the Hc2 route
   await assumptions.screenshot({ path: `${SHOTS}/06-models-indistinguishable.png` })
 
+  // 5b. The Jc plot under a fixed kappa, which is the other half of FR-026a.
+  // There the coherence length follows the fit, so the curve runs from absolute
+  // zero to Tc instead of stopping at the data -- and falls orders of magnitude
+  // past anything measured on the way, which is what the axis range in
+  // Charts.tsx exists to keep from squashing the points into a strip.
+  await charts.getByRole('tab', { name: '임계전류밀도 Jc(T)' }).click()
+  await expect(charts.locator('.js-plotly-plot')).toBeVisible()
+  await page.waitForTimeout(700)
+  await charts.screenshot({ path: `${SHOTS}/06b-chart-jc-fixed-kappa.png` })
+
   // 6. A refusal, rendered in Korean rather than as a stack trace.
   //
   // kappa below exp(-0.5) makes ln(kappa) + 0.5 negative, so equation (1) would

@@ -50,7 +50,7 @@ measured points were moved to the backend for exactly this reason.
 
 ## Verifying
 
-    cd backend && .\.venv\Scripts\python.exe -m pytest -q     # 176 tests
+    cd backend && .\.venv\Scripts\python.exe -m pytest -q     # 191 tests
     cd frontend && npm run test:e2e                           # 25 tests, starts both servers
     cd frontend && npm run shots                              # screenshots into e2e/.shots for review by eye
 

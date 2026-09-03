@@ -34,6 +34,20 @@ def _list(values) -> list[float]:
     return [float(x) for x in np.asarray(values, dtype=float).ravel()]
 
 
+def _list_or_null(values) -> list[float | None]:
+    """The same, for an array that carries NaN where the model has no value.
+
+    JSON has no NaN. Python's encoder will happily write the bare token `NaN`,
+    which is valid for itself and rejected by `JSON.parse` in the browser, so
+    the gap is sent as null instead -- which is also what a plotting library
+    reads as a break in a line rather than as a point at zero.
+    """
+    return [
+        (float(x) if np.isfinite(x) else None)
+        for x in np.asarray(values, dtype=float).ravel()
+    ]
+
+
 class Model(BaseModel):
     """Base: reject unknown fields rather than silently ignoring them.
 
@@ -306,6 +320,12 @@ class SuperfluidCurveOut(Model):
     temperature_K: list[float]
     rho_s: list[float]
     lambda_nm: list[float]
+    jc_A_per_m2: list[float | None] = Field(
+        description=(
+            "Equation (1) along the curve. Null where the coherence length is "
+            "not available without an added assumption (FR-026a)"
+        )
+    )
 
     @classmethod
     def of(cls, curve: t.SuperfluidCurve) -> "SuperfluidCurveOut":
@@ -313,6 +333,7 @@ class SuperfluidCurveOut(Model):
             temperature_K=_list(curve.temperature_K),
             rho_s=_list(curve.rho_s),
             lambda_nm=_list(u.m_to_nm(curve.lambda_)),
+            jc_A_per_m2=_list_or_null(curve.jc),
         )
 
 

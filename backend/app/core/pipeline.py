@@ -12,11 +12,12 @@ from .diagnostics import build_report
 from .errors import CoreError
 from .fitting import fit as run_fit
 from .gap_models import lambda_of_T, rho_s
-from .lambda_solver import build_lambda_table
+from .lambda_solver import build_lambda_table, interpolate_xi, jc_model
 from .montecarlo import ProgressCallback, propagate
 from .types import (
     AnalysisResult,
     AnalysisSettings,
+    CoherenceSource,
     FitResult,
     GapModel,
     LambdaTable,
@@ -42,7 +43,9 @@ def run_lambda_table(
     return build_lambda_table(dataset, settings)
 
 
-def build_curve(fit: FitResult) -> SuperfluidCurve:
+def build_curve(
+    fit: FitResult, table: LambdaTable, settings: AnalysisSettings
+) -> SuperfluidCurve:
     """A dense model curve from absolute zero up towards Tc.
 
     Starting at zero rather than at the coldest measurement (FR-026), so that
@@ -54,11 +57,26 @@ def build_curve(fit: FitResult) -> SuperfluidCurve:
 
     Stopping just short of Tc rather than at it, because rho_s -> 0 there and
     lambda diverges; a plot and an exported table both need a finite last point.
+
+    The critical current density is on the same grid, and is the same model as
+    `FitResult.jc_model` rather than a second expression of it: both are
+    equation (1) at the fitted parameters, and the only difference is where
+    they are sampled. Its coherence length comes from the fit under a fixed
+    kappa and from the measurements otherwise, which is why it is NaN outside
+    their span there -- `interpolate_xi` says why (FR-026a, research R12).
     """
     t = np.linspace(0.0, fit.tc.value * 0.999, CURVE_POINTS)
     r = rho_s(t, fit.delta0.value, fit.tc.value, fit.gap_model)
     lam = lambda_of_T(t, fit.lambda0.value, fit.delta0.value, fit.tc.value, fit.gap_model)
-    return SuperfluidCurve(temperature_K=t, rho_s=r, lambda_=lam)
+
+    if settings.coherence_source is CoherenceSource.FIXED_KAPPA:
+        xi = lam / float(settings.kappa_fixed)
+    else:
+        xi = interpolate_xi(table.temperature_K, table.xi, t)
+    with np.errstate(divide="ignore", invalid="ignore"):
+        jc = np.asarray(jc_model(lam, xi), dtype=float)
+
+    return SuperfluidCurve(temperature_K=t, rho_s=r, lambda_=lam, jc=jc)
 
 
 def _chi2_both_models(
@@ -91,7 +109,7 @@ def run_analysis(
     fit = run_fit(dataset, table, settings)
     chi2_clean, chi2_dirty = _chi2_both_models(dataset, table, settings)
     report = build_report(table, fit, settings, chi2_clean, chi2_dirty)
-    curve = build_curve(fit)
+    curve = build_curve(fit, table, settings)
 
     result_uncertainty = None
     if uncertainty is not None and uncertainty.any_uncertainty:

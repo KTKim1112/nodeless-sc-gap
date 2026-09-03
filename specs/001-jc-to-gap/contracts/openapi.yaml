@@ -480,20 +480,29 @@ components:
           items: { type: number }
           description: >
             Equation (1) at the fitted parameters, at each measured
-            temperature, in input order (FR-026a). On the measurements rather
-            than on the SuperfluidCurve grid because equation (1) needs xi as
-            well as lambda, and outside FIXED_KAPPA the coherence length is
-            known only where a measurement supplied it.
+            temperature, in input order (FR-026a). One value per measurement,
+            so that it exports beside the measured column. SuperfluidCurve.jc
+            is the same model sampled as a curve.
         n_points:            { type: integer }
         n_free_parameters:   { type: integer }
 
     SuperfluidCurve:
       type: object
-      required: [temperature_K, rho_s, lambda_nm]
+      required: [temperature_K, rho_s, lambda_nm, jc_A_per_m2]
       properties:
         temperature_K: { type: array, items: { type: number } }
         rho_s:         { type: array, items: { type: number } }
         lambda_nm:     { type: array, items: { type: number } }
+        jc_A_per_m2:
+          type: array
+          items: { type: [number, "null"] }
+          description: >
+            Equation (1) along the same grid (FR-026a). Null wherever the
+            coherence length is not available without an added assumption:
+            nowhere under FIXED_KAPPA, and everywhere outside the span of the
+            measurements under the other two sources. Null rather than NaN
+            because JSON has no NaN, and because a plotting library reads null
+            as a break in a line and NaN, if it survived, as nothing at all.
 
     DiagnosticReport:
       type: object

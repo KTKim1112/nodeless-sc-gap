@@ -24,7 +24,7 @@ Written so that someone starting from the same place can follow it.
 - [02. Prerequisites — what to install and why](#02-prerequisites--what-to-install-and-why)
 - [03. Orca and Claude Code](#03-orca-and-claude-code--which-is-which)
 - [04. SDD — spec-driven development](#04-sdd--spec-driven-development)
-- [05. Phase 0 to 10 — what actually happened](#05-phase-0-to-10--what-actually-happened)
+- [05. Phase 0 to 11 — what actually happened](#05-phase-0-to-11--what-actually-happened)
 - [06. What one turn looks like](#06-what-one-turn-looks-like)
 - [07. The result](#07-the-result)
 - [08. Doing it again — a checklist](#08-doing-it-again--a-checklist)
@@ -539,7 +539,7 @@ where it went wrong.
 
 ---
 
-## 05. Phase 0 to 10 — what actually happened
+## 05. Phase 0 to 11 — what actually happened
 
 What follows is the record. Ten commits correspond to the stages. The **what
 actually happened** paragraphs are the most valuable part of this manual: the
@@ -923,6 +923,76 @@ against the other is the reason the column exists.
 
 ---
 
+### Phase 11 — the same Jc(T), drawn as a curve
+
+This phase exists because the tool was used and the plot was wrong. Not wrong
+in its numbers: wrong in what it looked like.
+
+Phase 10 drew the prediction as a line joining the measured temperatures. The
+report from use was that it does not read as a fit -- it reads as a second data
+series. That reading was close to correct. The line combined the **fitted**
+`lambda` with the **measured** `xi`, so every wiggle in the `Hc2` column
+appeared in the line that was meant to be the model.
+
+> **The mistake was in the argument, not in the code**
+>
+> Phase 10 refused to draw a curve because filling the space between the
+> measurements needs `xi` there, and supplying it would mean assuming a form
+> for `Bc2(T)` -- which section 9 of the specification excludes.
+>
+> That treats two different acts as one. Reaching *past* the last measurement
+> really is assuming a form for `Bc2(T)`: nothing constrains the value, so the
+> value is the assumption. Filling in *between* two measurements is not; the
+> interpolant is pinned on both sides, and which one is used barely changes the
+> answer.
+>
+> "Barely" was measured rather than asserted, because that is the rule here.
+
+**What was measured, and what it changed.** The obvious way to fill the gaps is
+to interpolate `xi` itself. It is the wrong quantity. From equation (2),
+`xi` goes as `Bc2^(-1/2)`, which turns sharply upward as `Bc2` falls towards
+zero near `Tc` -- exactly where measurements are usually sparsest. `Bc2` is
+close to polynomial in `T`, and interpolating it and converting afterwards is
+**thirty to a hundred times more accurate on the same points**.
+
+| `Bc2(T)`, 8 points | interpolate `Bc2` | interpolate `xi` |
+| --- | --- | --- |
+| `1 - t^2`, the usual form | 0.027 % | 2.23 % |
+| `1 - t` | 0.000 %, exact | 2.35 % |
+| `(1 - t^2)^2` | 1.52 % | 6.36 % |
+
+A second measurement settled which interpolant. A cubic spline is more accurate
+than PCHIP on noiseless data and worse once the data carry 1 % scatter, where
+it also adds about three times as much oscillation -- and an oscillation
+between two points is a feature of the drawn curve that the model does not
+have, which a reader cannot tell from one that does. PCHIP, therefore.
+
+And a third measurement said that none of it matters much: a 1 % error in `xi`
+moves the drawn `Jc` by 0.23 % at `kappa = 45`, because `xi` enters equation (1)
+only inside a logarithm. That is the same insensitivity research R11 records
+from the other direction. It is worth knowing, and it is not a reason to skip
+the measurement -- "it does not matter much" is a conclusion, not an assumption.
+
+**What had to be right or the page would have gone blank.** Outside the
+measured range the curve has no value, and in the physics core that is `NaN`.
+JSON has no `NaN`; Python's encoder writes the bare token `NaN`, which the
+browser's `JSON.parse` rejects. One such gap would have taken down the entire
+response, not just the one plot. The gaps are converted to `null` at the API
+boundary, and a test reads the raw response text to check -- a parsed body
+would have turned the token into a float before the test could see it.
+
+The same distinction runs into the exported file: the cell is left **blank**,
+never `0` and never `nan`. A spreadsheet reads a blank as missing and a number
+as a measurement, and a zero at a temperature the analysis declined to speak
+about would end up in someone's figure.
+
+- **Gate** — the `Jc` tab shows a fitted curve, and the curve and the reported
+  per-point column are one model rather than two. **Met**: a test evaluates the
+  curve's own recipe at the measured temperatures and gets the reported column
+  back. 191 backend plus 25 end-to-end tests.
+
+---
+
 ## 06. What one turn looks like
 
 ### 6.1 Division of labour
@@ -995,7 +1065,7 @@ order are all fixed.
 | | |
 | --- | --- |
 | Commits | 17 |
-| Backend tests | 176 |
+| Backend tests | 191 |
 | Browser tests | 25 |
 | API endpoints | 10 |
 | Requirements | 30, each mapped to a task |
@@ -1017,7 +1087,7 @@ nodeless-sc-gap/
 ├── docs/                     teaching material (article VIII exemption)
 │   ├── manual.en.md          this document
 │   ├── manual.ko.md          the Korean version
-│   └── images/               nine screenshots for the manual
+│   └── images/               ten screenshots for the manual
 │
 ├── specs/001-jc-to-gap/      the specification -- written before the code
 │   ├── spec.md               what and why (no technology named)
@@ -1042,7 +1112,7 @@ nodeless-sc-gap/
 │   │   ├── schemas.py        the wire format. Units convert only here
 │   │   ├── resources.py      where its own files are: installed or packaged
 │   │   └── desktop.py        entry point for the standalone build
-│   ├── tests/                14 files, 176 tests
+│   ├── tests/                15 files, 191 tests
 │   └── examples/             two built-in examples and their generator
 │
 ├── packaging/                building the distributable .exe
@@ -1171,16 +1241,41 @@ Origin or Excel beside your own measurements.
 
 ![The critical current density](images/04b-chart-jc.png)
 
-**Critical current density `Jc(T)`.** What was supplied, and what the fitted
-parameters predict for it. The two plots above show *derived* quantities; this
-is the only one that compares against the measurement itself. Both columns are
-in the result CSV, side by side: `Jc_A_per_m2` and `Jc_model_A_per_m2`.
+**Critical current density `Jc(T)`.** What was supplied, with the fitted curve
+drawn through it. The two plots above show *derived* quantities; this is the
+only one that compares against the measurement itself. Both columns are in the
+result CSV, side by side -- `Jc_A_per_m2` and `Jc_model_A_per_m2` -- and the
+curve itself is the `Jc_model_A_per_m2` column of the curve CSV.
 
-Unlike the other two it is drawn only at the measured temperatures. Equation (1)
-needs `xi` as well as `lambda`, and `xi` comes from the fit only in fixed-kappa
-mode; in the other two it exists only where a measurement supplied it. Filling
-the space between would mean assuming a form for `Bc2(T)`, which is physics this
-tool has declined to do.
+**The curve stops where the measurements do.** In the picture above it begins
+at the coldest measured temperature and ends at the hottest, unlike the
+`rho_s` and `lambda` curves which run from 0 K to `Tc`. Equation (1) needs `xi`
+as well as `lambda`, and `xi` comes from the fit only in fixed-kappa mode.
+
+| How `xi` is established | Where the curve is drawn |
+| --- | --- |
+| Fixed `kappa` | **0 K to `Tc`** -- `xi = lambda_model(T)/kappa`, from the fit alone |
+| From `Hc2` | Between the coldest and hottest measurement |
+| Explicit `xi` | Between the coldest and hottest measurement |
+
+![The critical current density under a fixed kappa](images/06b-chart-jc-fixed-kappa.png)
+
+The second example, `nb3sn_like`, which fixes `kappa`. Same tab, but the curve
+starts at absolute zero and leaves the frame at the bottom right. **Fixing
+`kappa` lets the curve be drawn everywhere because it assumed the number it
+needed**, and this figure is the one place that difference is visible.
+
+> **Interpolating between the points and reaching past them are not the same act**
+>
+> Both were refused at first. That was wrong.
+>
+> *Between* the measurements an interpolant is pinned on both sides, so the
+> choice of form barely matters -- measured at under 0.35 % on the drawn `Jc`.
+> *Past* the last measurement nothing constrains it, and the value is simply
+> whatever functional form was chosen, which is the assumption about `Bc2(T)`
+> that section 9 of the specification declines to make.
+>
+> So the curve now interpolates, and still refuses to extrapolate.
 
 ![The residuals](images/04b-chart-residuals.png)
 
@@ -1225,7 +1320,7 @@ separate clean from dirty**. That contrast is why two examples ship.
 ### 7.6 Verifying it
 
 ```powershell
-# 176 backend tests -- whether the physics is right
+# 191 backend tests -- whether the physics is right
 cd backend
 .\.venv\Scripts\python.exe -m pytest -q
 
@@ -1460,7 +1555,7 @@ claude --resume                          # continue an earlier one
 .\dev.ps1                                # both servers, and open the page
 
 # ---- verifying ----
-cd backend; .\.venv\Scripts\python.exe -m pytest -q     # 176 tests
+cd backend; .\.venv\Scripts\python.exe -m pytest -q     # 191 tests
 cd frontend; npm run test:e2e                           # 25 tests
 cd frontend; npm run shots                              # screenshots
 

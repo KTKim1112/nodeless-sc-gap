@@ -774,3 +774,95 @@ therefore moves the extracted `lambda` by well under 1 % for typical
 `kappa ~ 40`. This is why the original paper could treat `kappa` as
 temperature-independent, and it is a useful sanity check: if the extracted
 `lambda` is seen to be strongly sensitive to `xi`, something else is wrong.
+
+---
+
+## R12. Interpolating the coherence length, for the `Jc(T)` curve
+
+FR-026a asks for the critical current density to be drawn as a curve rather
+than as a polyline through the measurements. Equation (1) then has to be
+evaluated between the measured temperatures, which needs `xi` where nothing was
+measured. Under `FIXED_KAPPA` there is nothing to decide -- `xi = lambda/kappa`
+follows the fit at every temperature. Under `FROM_HC2` and `EXPLICIT_XI` the
+question is what to interpolate, and how.
+
+### R12.1 Interpolate `Bc2`, not `xi`
+
+The obvious choice is to interpolate `xi` itself, since that is what equation
+(1) consumes and it is the one quantity both sources have. It is the wrong one.
+From (2), `xi = sqrt(PHI0 / (2 pi Bc2))`: `xi` goes as `Bc2^(-1/2)` and turns
+sharply upward as `Bc2` falls towards zero near `Tc`, which is exactly where
+measurements are usually sparsest. `Bc2` is close to polynomial in `T` for
+every form in ordinary use, and a polynomial interpolant reproduces it well.
+
+Measured on three analytic forms with `Bc2(0) = 10 T`, `Tc = 9.2 K`, sampled at
+equally spaced temperatures from `0.1 Tc` to `0.9 Tc`, as the worst relative
+error in `xi` anywhere between the nodes:
+
+| `Bc2(T)` | points | pchip on `Bc2` | pchip on `xi` | spline on `xi` | linear on `xi` |
+| --- | --- | --- | --- | --- | --- |
+| `1 - t^2` | 8 | 0.027 % | 2.23 % | 1.48 % | 5.25 % |
+| `1 - t` | 8 | 0.000 % | 2.35 % | 1.55 % | 5.52 % |
+| `(1 - t^2)^2` | 8 | 1.52 % | 6.36 % | 4.57 % | 14.05 % |
+| `1 - t^2` | 20 | 0.002 % | 0.287 % | 0.128 % | 1.12 % |
+| `(1 - t^2)^2` | 20 | 0.152 % | 0.835 % | 0.418 % | 2.93 % |
+
+Interpolating `Bc2` is thirty to a hundred times more accurate on the same
+points, and is exact for a `Bc2` linear in `T`. So the interpolation is done in
+`PHI0 / (2 pi xi^2)`, which is `Bc2` under `FROM_HC2` and the field an explicit
+`xi` corresponds to under `EXPLICIT_XI`. One rule covers both sources, and
+`EXPLICIT_XI` does not need an upper critical field to have been measured for
+it to apply -- the transformation is algebra on the number it was given.
+
+### R12.2 PCHIP, not a cubic spline
+
+On noiseless data a cubic spline is better: it is exact for a quadratic `Bc2`
+and reaches 0.09 % on the quartic where PCHIP reaches 1.52 %. Real `Bc2` data
+have scatter, and the ranking reverses. With 8 points over `0.2` to `0.9 Tc`,
+averaged over 400 draws, as the mean relative error in `xi` against the exact
+curve, and the spurious oscillation each interpolant adds (total variation in
+excess of the net change, zero for a monotone curve):
+
+| scatter on `Bc2` | `Bc2(T)` | pchip error | spline error | pchip wiggle | spline wiggle |
+| --- | --- | --- | --- | --- | --- |
+| 0 % | `1 - t^2` | 0.006 % | 0.000 % | 0.00 % | 0.00 % |
+| 0 % | `(1 - t^2)^2` | 0.132 % | 0.006 % | 0.00 % | 0.00 % |
+| 1 % | `1 - t^2` | 0.373 % | 0.408 % | 0.00 % | 0.09 % |
+| 3 % | `1 - t^2` | 1.121 % | 1.223 % | 0.61 % | 1.97 % |
+| 3 % | `(1 - t^2)^2` | 1.159 % | 1.335 % | 0.03 % | 0.50 % |
+
+At 1 % scatter and above PCHIP is the more accurate of the two, and it adds
+about a third as much oscillation. That oscillation is the part that matters
+here beyond accuracy: a wiggle between two points is a feature of the drawn
+curve that the model does not have, and a reader cannot tell it from one that
+does. PCHIP is also positivity-preserving, so it cannot return a negative
+`Bc2` and hence a `NaN` in `xi`; no such failure was produced by either
+interpolant in 12000 adversarial draws, but only one of the two is guaranteed.
+
+### R12.3 How much any of this matters
+
+Very little, which is the point of measuring it. Differentiating (1) at fixed
+`lambda` gives `d ln Jc / d ln xi = -1 / [ln(kappa) + 0.5]`, so a 1 % error in
+`xi` moves the drawn `Jc` by:
+
+| `kappa` | error in `Jc` from a 1 % error in `xi` |
+| --- | --- |
+| 10 | 0.357 % |
+| 45 | 0.232 % |
+| 100 | 0.196 % |
+
+This is R11 seen from the other end. The worst interpolation error in the table
+above, 1.5 % on a quartic `Bc2` from eight points, reaches 0.35 % in the drawn
+curve -- below the width of the line. The choice was still made by measurement
+rather than by argument, because "it does not matter much" is a conclusion and
+not an assumption.
+
+### R12.4 What is not done
+
+The interpolant is not extended past the coldest or hottest measurement. Inside
+the data an interpolant is constrained on both sides; outside it, its value is
+whatever functional form was chosen, which is precisely the assumption about
+`Bc2(T)` that section 9 of the specification declines to make. The curve
+therefore stops where the data stop, and the difference is visible on the plot:
+under `FIXED_KAPPA` the same curve runs from absolute zero to `Tc`, because
+there the coherence length was assumed rather than measured.

@@ -16,6 +16,7 @@ from __future__ import annotations
 import math
 
 import numpy as np
+from scipy.interpolate import PchipInterpolator
 from scipy.optimize import brentq
 
 from .constants import KAPPA_MODEL_FLOOR, MU0, PHI0
@@ -115,6 +116,49 @@ def lambda_from_fixed_kappa(jc, kappa: float) -> FloatArray:
         raise KappaTooSmall(kappa=kappa, floor=KAPPA_MODEL_FLOOR)
     j = np.atleast_1d(np.asarray(jc, dtype=float))
     return np.cbrt(_A * (math.log(kappa) + 0.5) / j)
+
+
+def interpolate_xi(
+    temperature_K: FloatArray, xi: FloatArray, grid_K: FloatArray
+) -> FloatArray:
+    """The coherence length between the measured temperatures, for plotting.
+
+    Equation (1) needs `xi` wherever the model curve is drawn, and outside a
+    fixed kappa it is known only where a measurement supplied it. This fills the
+    gaps, and returns NaN outside the span of the measurements rather than
+    extrapolating: beyond the coldest and hottest measured point there is
+    nothing to interpolate between, and section 9 of the specification declines
+    to assume a temperature dependence for the upper critical field.
+
+    The interpolation is in `PHI0 / (2 pi xi^2)`, which is `Bc2` under
+    FROM_HC2 and the field an explicit `xi` corresponds to under EXPLICIT_XI --
+    not in `xi` itself. Research R12 measures why: `xi` goes as `Bc2^(-1/2)`
+    and turns sharply upward as `Bc2` falls towards zero, so interpolating it
+    directly is thirty to a hundred times less accurate on the same points.
+    PCHIP rather than a spline for the same reason recorded there: a spline is
+    more accurate on noiseless data and worse on data with realistic scatter,
+    where it invents oscillations the model does not have.
+
+    Duplicate temperatures are averaged. Two measurements at one temperature is
+    a repeat, not a discontinuity, and PCHIP requires a strictly increasing
+    abscissa.
+    """
+    t = np.asarray(temperature_K, dtype=float)
+    b = PHI0 / (2.0 * np.pi * np.asarray(xi, dtype=float) ** 2)
+
+    order = np.argsort(t, kind="stable")
+    t, b = t[order], b[order]
+    unique_t, inverse = np.unique(t, return_inverse=True)
+    if unique_t.size < 2:
+        return np.full(np.shape(grid_K), np.nan, dtype=float)
+    if unique_t.size != t.size:
+        counts = np.bincount(inverse)
+        b = np.bincount(inverse, weights=b) / counts
+
+    grid = np.asarray(grid_K, dtype=float)
+    b_grid = PchipInterpolator(unique_t, b, extrapolate=False)(grid)
+    with np.errstate(divide="ignore", invalid="ignore"):
+        return np.sqrt(PHI0 / (2.0 * np.pi * b_grid))
 
 
 def resolve_xi(dataset: MeasurementDataset, settings: AnalysisSettings) -> FloatArray | None:

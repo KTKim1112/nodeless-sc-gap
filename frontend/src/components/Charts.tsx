@@ -33,7 +33,7 @@ const TABS: { id: Tab; label: string; hint: string }[] = [
   {
     id: 'jc',
     label: '임계전류밀도 Jc(T)',
-    hint: '측정한 값 그 자체와, 피팅된 값이 예측하는 값입니다. 다른 두 그래프와 달리 측정한 온도에서만 그려집니다 — 식 (1)에는 λ 외에 ξ도 필요한데, ξ는 측정점 사이에서는 알 수 없기 때문입니다.',
+    hint: '측정값과 피팅 곡선입니다. κ를 고정한 경우가 아니면 곡선은 측정 온도 범위 안에서만 그려집니다 — 식 (1)에는 λ 외에 ξ도 필요한데, 측정 범위 밖에는 보간할 두 점이 없기 때문입니다.',
   },
   {
     id: 'residuals',
@@ -87,35 +87,43 @@ export function Charts({ result }: Props) {
     },
   ], [table, curve, modelName])
 
-  // The model here is a polyline through the measured temperatures rather than
-  // a dense curve (FR-026a), so unlike the two plots above it has to be drawn
-  // in temperature order -- the points arrive in the order they were typed,
-  // and Plotly would join them in that order. Sorting is presentation: both
-  // arrays are computed in the backend and only rearranged here.
-  const jcData = useMemo<Data[]>(() => {
-    const byTemperature = table.temperature_K
-      .map((_, i) => i)
-      .sort((a, b) => table.temperature_K[a] - table.temperature_K[b])
+  // Drawn from the same dense curve as the two plots above, and stopping where
+  // the measurements do unless kappa was fixed (FR-026a). The backend sends
+  // null wherever equation (1) has no coherence length to work with, which
+  // Plotly reads as a break in the line rather than as a point at zero.
+  const jcData = useMemo<Data[]>(() => [
+    {
+      x: table.temperature_K,
+      y: table.jc_A_per_m2,
+      mode: 'markers',
+      type: 'scatter',
+      name: '측정',
+      marker,
+    },
+    {
+      x: curve.temperature_K,
+      y: curve.jc_A_per_m2,
+      mode: 'lines',
+      type: 'scatter',
+      name: modelName,
+      line: { width: 2 },
+    },
+  ], [table, curve, modelName])
+
+  // Under a fixed kappa the curve runs all the way to Tc, where Jc has fallen
+  // by four orders of magnitude; left to itself the logarithmic axis would fit
+  // all of that in and squash the measurements into a strip at the top. The
+  // range is taken from the measured values instead, so the curve leaves the
+  // frame rather than the data leaving the eye. Choosing an axis range is
+  // presentation, not a physical quantity.
+  const jcRange = useMemo(() => {
+    const positive = table.jc_A_per_m2.filter((v) => v > 0)
+    if (positive.length === 0) return undefined
     return [
-      {
-        x: table.temperature_K,
-        y: table.jc_A_per_m2,
-        mode: 'markers',
-        type: 'scatter',
-        name: '측정',
-        marker,
-      },
-      {
-        x: byTemperature.map((i) => table.temperature_K[i]),
-        y: byTemperature.map((i) => fit.jc_model_A_per_m2[i]),
-        mode: 'lines+markers',
-        type: 'scatter',
-        name: modelName,
-        line: { width: 2 },
-        marker: { size: 4 },
-      },
+      Math.log10(Math.min(...positive) / 3),
+      Math.log10(Math.max(...positive) * 3),
     ]
-  }, [table, fit, modelName])
+  }, [table])
 
   const residualData = useMemo<Data[]>(() => [
     {
@@ -184,6 +192,7 @@ export function Charts({ result }: Props) {
               title: { text: 'Jc [A/m²]' },
               type: 'log',
               exponentformat: 'power',
+              range: jcRange,
             },
           }}
         />

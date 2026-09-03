@@ -341,6 +341,10 @@ appeared somewhere.
 
 176 backend tests, 25 e2e tests.
 
+*Why this plot alone is not a dense curve.* **Superseded by Phase 11**, which
+found the argument below to be half right. Kept as written, because what was
+wrong with it is the useful part.
+
 *Why this plot alone is not a dense curve.* The other two need only the fitted
 parameters, so they can be sampled at any temperature. Equation (1) needs the
 coherence length as well, and that comes from the fit only under
@@ -368,6 +372,79 @@ that.
 
 ---
 
+## Phase 11 — The critical current density as a fitted curve
+
+Phase 10 drew the prediction as a polyline through the measured temperatures.
+Reported from use: it does not read as a fit. It reads as a second data series,
+which is close to what it was -- the fitted `lambda` combined with the measured
+`xi`, so that every wiggle in `Hc2` appeared in the line that was supposed to
+be the model. FR-026a rewritten, and the curve drawn like the other two.
+
+| Id | Task | Depends on |
+| --- | --- | --- |
+| T1101 | [done] measure which interpolant: `Bc2` against `xi`, PCHIP against spline, against three analytic `Bc2(T)` forms with and without scatter | — |
+| T1102 | [done] `research.md` R12: the tables, and what a `xi` error is worth in the drawn `Jc` | T1101 |
+| T1103 | [done] spec: FR-026a rewritten -- interpolate between, never extrapolate past; state it on screen; absence is never a zero | T1102 |
+| T1104 | [done] `data-model.md`: `SuperfluidCurve.jc`, and why the gaps travel on the shared grid | T1103 |
+| T1105 | [done] `core/lambda_solver.py`: `interpolate_xi`, PCHIP on `PHI0 / (2 pi xi^2)`, NaN outside the data | T1104 |
+| T1106 | [done] `core/pipeline.py`: `build_curve` takes the table and the settings and returns `jc` too | T1105 |
+| T1107 | [done] `schemas.py` `_list_or_null`, `contracts/openapi.yaml`, regenerated frontend types | T1106 |
+| T1108 | [done] `routes.py`: the curve export gains the column, blank where the model has none | T1107 |
+| T1109 | [done] `Charts.tsx`: the dense curve replaces the polyline; axis range from the measured values | T1107 |
+| T1110 | [done] tests: `test_curve.py`, the null encoding, the blank CSV cell, the e2e hint and header | T1108, T1109 |
+
+**Gate:** the `Jc` tab shows a fitted curve, and the curve and the reported
+per-point column are one model. **Met.** The curve is smooth, passes through
+the measurements it was fitted to, and stops where the data stop unless `kappa`
+was fixed. `test_the_drawn_curve_is_the_same_model_as_the_reported_prediction`
+evaluates the curve's own recipe at the measured temperatures and gets
+`FitResult.jc_model` back, so the figure and the exported table cannot drift
+apart.
+
+191 backend tests, 25 e2e tests.
+
+*What Phase 10 got wrong.* It treated interpolating between two measurements
+and extrapolating past the last one as the same act, and refused both. They are
+not the same. Inside the data an interpolant is pinned on both sides and the
+choice of form is worth a fraction of a per cent; outside it, the value is
+entirely whatever form was chosen, which is the assumption about `Bc2(T)` that
+spec section 9 declines. The new curve interpolates and still refuses to
+extrapolate, and the plot shows the difference: it stops at the coldest and
+hottest measurement, while under `FIXED_KAPPA` -- where the coherence length
+was assumed rather than measured -- the same curve runs from absolute zero to
+`Tc`.
+
+*What Phase 10 got right.* That the prediction must exist per measured point as
+well, because that is what the results table carries and what the direct
+route's residual measures. Both survive; `FitResult.jc_model` is unchanged.
+
+*Measured, not argued.* Interpolating `xi` directly is the obvious choice and
+is thirty to a hundred times worse than interpolating `Bc2` and converting,
+because `xi` goes as `Bc2^(-1/2)` and turns sharply upward exactly where
+measurements are sparsest. A cubic spline beats PCHIP on noiseless data and
+loses on data with 1 % scatter or more, where it adds about three times as much
+oscillation that the model does not have. Research R12 has both tables. The
+same section records that none of it moves the drawn curve by much -- a 1 %
+error in `xi` is 0.23 % in `Jc` at `kappa = 45` -- which is a conclusion worth
+having rather than an excuse for not measuring.
+
+*One thing that had to be got right or the page would go blank.* The gaps are
+`NaN` in the core and `null` at the API boundary. Python's JSON encoder will
+write the bare token `NaN`, which `JSON.parse` rejects, so a single gap would
+have taken down the whole response rather than one plot. A test asserts on the
+raw response text, because a parsed body would have turned the token into a
+float before the test could see it.
+
+*A presentation consequence, again found by looking.* Under a fixed `kappa` the
+curve runs to `Tc`, where `Jc` has fallen more than two decades below anything
+measured. Left to itself the logarithmic axis fits all of that in and squashes
+the measurements into a strip at the top. The axis range is taken from the
+measured values instead, so the curve leaves the frame rather than the data
+leaving the eye, and `06b-chart-jc-fixed-kappa.png` is in the screenshot set so
+that this stays visible.
+
+---
+
 ## Requirement coverage
 
 Every functional requirement maps to at least one task.
@@ -387,8 +464,8 @@ Every functional requirement maps to at least one task.
 | FR-011 | T109, T307 | FR-025 | T308 |
 | FR-012 | T109, T308 | FR-026 | T401, T804 |
 | FR-013 | T109, T307 | FR-027 | T207, T401, T403, T1006 |
-| | | FR-026a | T1001, T1003, T1007, T1008 |
-| | | FR-027a | T805, T806, T807, T808 |
+| | | FR-026a | T1001, T1003, T1007, T1008, T1103, T1105, T1109, T1110 |
+| | | FR-027a | T805, T806, T807, T808, T1108 |
 | FR-014 | T109, T308 | FR-028 | T122, T206, T404 |
 | | | FR-029 | T111, T120b, T501 |
 | | | FR-030 | T109, T111, T503 |

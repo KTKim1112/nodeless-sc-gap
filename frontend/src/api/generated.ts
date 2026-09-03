@@ -578,6 +578,11 @@ export interface components {
             rho_s: number[];
             /** Lambda Nm */
             lambda_nm: number[];
+            /**
+             * Jc A Per M2
+             * @description Equation (1) along the curve. Null where the coherence length is not available without an added assumption (FR-026a)
+             */
+            jc_A_per_m2: (number | null)[];
         };
         /** UncertaintyRequest */
         UncertaintyRequest: {

@@ -168,9 +168,11 @@ formula is in the core.
 
 `jc_model` is the same idea run the other way: the fitted parameters pushed
 back through equation (1) to say what critical current density they predict. It
-is on the measured temperatures rather than on the grid of `SuperfluidCurve`
-because equation (1) needs `xi` as well as `lambda`, and outside `FIXED_KAPPA`
-the coherence length exists only where a measurement supplied it (FR-026a).
+is on the measured temperatures because that is where it is wanted -- one value
+per row of the exported table, beside the measured column. `SuperfluidCurve.jc`
+is the same model sampled as a curve instead, and the two are one expression
+evaluated twice rather than two expressions that have to be kept in step
+(FR-026a).
 
 `xi` here is the model's own: `lambda_model / kappa` under `FIXED_KAPPA`, where
 the fit determines it, and the supplied value under the other two sources,
@@ -191,9 +193,24 @@ measured points.
 | `temperature_K` | `float[]` | K |
 | `rho_s` | `float[]` | — |
 | `lambda_` | `float[]` | m |
+| `jc` | `float[]` | A/m² |
 
 Sampled on a uniform grid from `T = 0` to just below the fitted `Tc`, 200
 points by default.
+
+`jc` is equation (1) along that same grid, and is the only column here that can
+be absent in places: it carries `NaN` wherever the coherence length is not
+available without an added assumption. Under `FIXED_KAPPA` that is nowhere,
+since `xi = lambda/kappa` follows the fit; under `FROM_HC2` and `EXPLICIT_XI`
+it is everywhere outside the span of the measurements, and `interpolate_xi`
+supplies the inside by interpolating `PHI0 / (2 pi xi^2)` rather than `xi`
+(FR-026a, research R12).
+
+The gaps travel on the shared grid rather than as a shorter array of their own,
+because the three columns are one table: the exported curve file has a row per
+grid point, and a shorter `jc` could not be written into it without either
+padding or a second file. At the API boundary `NaN` becomes `null`, which is
+what JSON has and what a plotting library reads as a break in a line.
 
 Starting at zero rather than at the lowest measured temperature (FR-026). Both
 gap models are total at `T = 0`: `delta_of_T` returns `Delta(0)` there,
