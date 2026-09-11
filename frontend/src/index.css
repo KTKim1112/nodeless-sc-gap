@@ -143,7 +143,11 @@ input:focus, select:focus, textarea:focus {
 .data-input {
   margin-top: 0.85rem;
   width: 100%;
-  min-height: 13rem;
+  /* Tall enough for the whole placeholder. It is eleven lines now that it has
+     to carry the format on its own (FR-029a), and at 13rem the last two were
+     clipped -- which showed the reader a two-column example of a three-column
+     format. Found by looking at the screenshot, not by any test. */
+  min-height: 16rem;
   font-family: var(--code);
   font-size: 0.85rem;
   line-height: 1.5;

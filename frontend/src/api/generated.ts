@@ -47,43 +47,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/examples": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List Examples
-         * @description The built-in example datasets (FR-028).
-         */
-        get: operations["list_examples_api_examples_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/examples/{name}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get Example */
-        get: operations["get_example_api_examples__name__get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/lambda": {
         parameters: {
             query?: never;
@@ -329,42 +292,6 @@ export interface components {
             params?: {
                 [key: string]: unknown;
             };
-        };
-        /** Example */
-        Example: {
-            /** Name */
-            name: string;
-            /** Title */
-            title: string;
-            coherence_source: components["schemas"]["CoherenceSource"];
-            /** N Points */
-            n_points: number;
-            /**
-             * Expects Model Preference
-             * @description Whether this example's data are clean enough to separate the clean and dirty limits. One shipped example is and one is not.
-             */
-            expects_model_preference: boolean;
-            /**
-             * Text
-             * @description Raw file contents, to be sent to /api/parse unchanged
-             */
-            text: string;
-            suggested_settings: components["schemas"]["Settings"];
-        };
-        /** ExampleSummary */
-        ExampleSummary: {
-            /** Name */
-            name: string;
-            /** Title */
-            title: string;
-            coherence_source: components["schemas"]["CoherenceSource"];
-            /** N Points */
-            n_points: number;
-            /**
-             * Expects Model Preference
-             * @description Whether this example's data are clean enough to separate the clean and dirty limits. One shipped example is and one is not.
-             */
-            expects_model_preference: boolean;
         };
         /** FitResultOut */
         FitResultOut: {
@@ -729,57 +656,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ParseResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    list_examples_api_examples_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ExampleSummary"][];
-                };
-            };
-        };
-    };
-    get_example_api_examples__name__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                name: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Example"];
                 };
             };
             /** @description Validation Error */

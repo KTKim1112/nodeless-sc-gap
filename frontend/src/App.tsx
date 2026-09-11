@@ -4,14 +4,13 @@
  * Holds the state, calls the API, and lays the panels out in the order the work
  * happens: data in, check how it was read, choose settings, look at results.
  */
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   api,
   ApiError,
   type AnalyzeRequest,
   type AnalyzeResponse,
   type Dataset,
-  type Example,
   type JcUnit,
   type ParseResponse,
   type Settings,
@@ -126,12 +125,6 @@ export default function App() {
     setAnalysisError(null)
   }, [parsed, settings, jcUnit, xiUnit])
 
-  const onExampleChosen = useCallback((example: Example) => {
-    setText(example.text)
-    setSettings({ ...DEFAULT_SETTINGS, ...example.suggested_settings })
-    setJcUnit('A_PER_CM2')
-  }, [])
-
   const columnsNeeded = settings.coherence_source === 'FIXED_KAPPA' ? 2 : 3
   /** `parsed` describes an older version of the text than the one on screen. */
   const stale = text.trim() !== '' && parsedText !== text
@@ -174,7 +167,6 @@ export default function App() {
       <DataInput
         text={text}
         onTextChange={setText}
-        onExampleChosen={onExampleChosen}
         disabled={busy}
       />
 

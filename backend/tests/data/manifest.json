@@ -1,8 +1,8 @@
 [
   {
-    "name": "nbti_like",
-    "title": "NbTi-like film: weak-coupling, clean limit, with Hc2",
-    "file": "nbti_like.txt",
+    "name": "weak_coupling_clean_hc2",
+    "title": "Weak-coupling, clean limit, coherence length from Hc2",
+    "file": "weak_coupling_clean_hc2.txt",
     "coherence_source": "FROM_HC2",
     "n_points": 22,
     "expects_model_preference": true,
@@ -21,9 +21,9 @@
     }
   },
   {
-    "name": "nb3sn_like",
-    "title": "Nb3Sn-like film: strong-coupling, dirty limit, fixed kappa",
-    "file": "nb3sn_like.txt",
+    "name": "strong_coupling_dirty_kappa",
+    "title": "Strong-coupling, dirty limit, fixed Ginzburg-Landau parameter",
+    "file": "strong_coupling_dirty_kappa.txt",
     "coherence_source": "FIXED_KAPPA",
     "n_points": 25,
     "expects_model_preference": false,

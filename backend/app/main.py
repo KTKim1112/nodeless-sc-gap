@@ -26,7 +26,6 @@ VERSION = "0.1.0"
 #: it is not a server fault.
 _STATUS_BY_CODE: dict[str, int] = {
     "JOB_NOT_FOUND": 404,
-    "EXAMPLE_NOT_FOUND": 404,
     "INTERNAL": 500,
 }
 _DEFAULT_STATUS = 422

@@ -1027,6 +1027,71 @@ about would end up in someone's figure.
 
 ---
 
+### Phase 12 — removing the shipped datasets
+
+It started with a question: *where did the NbTi and Nb3Sn data come from?*
+
+From nowhere. Both files were computed from stated parameters by a generator in
+this repository. Nothing was hidden -- the header said so, the generator said
+so, the README said so, this manual said so -- and that turned out not to be
+the point.
+
+> **A dataset shipped beside a measurement tool is read as what the tool is for**
+>
+> Ours put two material names in front of a new user: `nbti_like`,
+> `nb3sn_like`. Whatever the header says, a material name reads as a
+> measurement of that material. The files were making a claim about real
+> samples nobody had put an instrument to.
+
+**A real dataset was looked for first.** The source paper is CC BY but
+tabulates no `Jc(T)`; the open data repositories carry nothing for an s-wave
+film; the public REBCO tape data are d-wave, which section 9 of the
+specification excludes. Every remaining candidate has its numbers in a figure,
+and reading points off a plot would have put digitisation error into the one
+file a new user judges the tool by. The search is recorded in section 9 so that
+it does not have to be repeated.
+
+**What went.** Two example buttons, two API endpoints, their schemas and error
+code, and the data directory inside both the executable and the container
+image. The API went from ten endpoints to eight.
+
+**What stayed, and why that is not a contradiction.** The same generated files
+are still here, under `backend/tests/data/`. The objection was to distributing
+manufactured measurements, not to testing against known answers -- and
+`test_whole_chain.py` is the only test that runs parsing, unit conversion, the
+inversion, the fit and the diagnostics together. No real dataset could stand in
+for it: no measured film has a `lambda(0)` known independently, so real data
+can confirm that a number came out but never that it was the right one.
+
+They were renamed too: `weak_coupling_clean_hc2` and
+`strong_coupling_dirty_kappa`. Named for the situation each one puts the fitter
+in rather than for a material, so the same mistake is not repeated in
+miniature.
+
+**What it costs.** A first-time user now has to bring a file before anything
+happens. That is a worse first minute, and it is exactly why FR-028 existed.
+The placeholder in the input box does what it can.
+
+> **A test rewritten twice, both times because it passed for the wrong reason**
+>
+> The check that no data endpoint survives first asserted a 404 from
+> `/api/examples`. It passed -- and would have passed forever, because the
+> single-page catch-all answers any unknown GET with the page itself.
+>
+> The second version read `app.routes`. That did not contain `/api/parse`
+> either: the endpoints live on an included router, so the list held one router
+> rather than its paths.
+>
+> It reads the generated OpenAPI schema now, which is the list that is actually
+> published. A test that passes while checking nothing is worse than no test.
+
+- **Gate** — nothing resembling a measurement leaves the product, and the
+  verification that needed generated data still runs. **Met**: 191 backend and
+  26 end-to-end tests, no data directory in the executable or the image, and
+  `test_the_api_serves_no_data_of_its_own` fails if such an endpoint returns.
+
+---
+
 ## 06. What one turn looks like
 
 ### 6.1 Division of labour
@@ -1103,7 +1168,7 @@ order are all fixed.
 | Browser tests | 25 |
 | API endpoints | 10 |
 | Requirements | 30, each mapped to a task |
-| Built-in examples | 2 |
+| Built-in examples | None (removed in Phase 12) |
 
 ### 7.2 Where everything lives
 
@@ -1147,7 +1212,7 @@ nodeless-sc-gap/
 │   │   ├── resources.py      where its own files are: installed or packaged
 │   │   └── desktop.py        entry point for the standalone build
 │   ├── tests/                15 files, 191 tests
-│   └── examples/             two built-in examples and their generator
+│   └── tests/data/           two synthetic fixtures and their generator
 │
 ├── packaging/                building the distributable .exe
 │   ├── build.ps1             the build command

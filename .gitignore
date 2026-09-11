@@ -28,9 +28,21 @@ desktop.ini
 *~
 
 # --- Runtime output ---
+# Everything this tool writes is a .csv, and a user's own measurements very
+# often are too. Ignored by default so that a file dropped in the project
+# directory cannot be committed by an absent-minded `git add -A`. The test
+# fixtures are the one exception, and they are .txt in practice.
 *.csv
-!backend/examples/*.csv
 !backend/tests/data/*.csv
+
+# The same hazard in the formats a measurement actually arrives in. The two
+# fixtures are named explicitly rather than the directory, so that a stray file
+# alongside them is still ignored.
+*.dat
+*.tsv
+/*.txt
+!backend/tests/data/weak_coupling_clean_hc2.txt
+!backend/tests/data/strong_coupling_dirty_kappa.txt
 
 # --- Packaging ---
 # PyInstaller output. Rebuilt by packaging/build.ps1, and the executable is

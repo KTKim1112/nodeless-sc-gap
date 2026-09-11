@@ -138,11 +138,13 @@ When the user requests a gap fit,
 Then the system still reports the fit but warns that the zero-temperature gap is
 poorly constrained by data of this temperature range.
 
-**AS-9 — Trying the tool without data**
-Given a first-time user with no data at hand,
-When the user selects one of the built-in example datasets,
-Then the full analysis runs on that dataset and produces results, so the user can
-see what the tool does before preparing their own file.
+**AS-9 — Withdrawn**
+The system shipped two generated example datasets so that a first-time user had
+something to run before preparing a file of their own. They were removed: the
+numbers in them were computed from stated parameters rather than measured, and
+distributing manufactured measurements alongside a measurement tool is not a
+trade this project is willing to make, however plainly the files said what they
+were. Section 9 records the consequence.
 
 **AS-10 — Taking results away**
 Given a completed analysis,
@@ -285,8 +287,23 @@ open, and each plot can be saved as an image.
   own measurements in their own tool, and the per-temperature table of FR-027
   does not contain it: that table has one row per measurement, and the curve is
   sampled independently of where the measurements happen to lie.
-- **FR-028** The system MUST provide at least two built-in example datasets that
-  exercise the full analysis.
+- **FR-029a** With no data entered, the system MUST show the column layout it
+  expects and the separators it accepts, since that is what a built-in example
+  used to demonstrate by being pressed. Any numbers shown to illustrate the
+  layout MUST be too few to analyse, so that a layout illustration cannot be
+  mistaken for a dataset -- which is the mistake FR-028 was withdrawn over.
+- **FR-028** *Withdrawn.* The system MUST NOT distribute measurement data it did
+  not measure, generated or otherwise. A dataset shipped beside an analysis tool
+  is read as an example of what the tool is for, and a manufactured one makes a
+  claim about real samples that nobody took an instrument to.
+
+  *What this costs, stated rather than glossed over.* A first-time user now has
+  to bring a file before anything happens, which is a worse first minute than
+  pressing a button. And generated data with a known answer is the only thing
+  that can verify the whole chain end to end -- no real film has a known
+  `lambda(0)` to check against -- so that verification does not disappear; it
+  moves out of the product and into the test suite, where it is not distributed
+  as an example of anything. FR-029a says what the user sees instead.
 
 ## 7. Key entities
 
@@ -330,6 +347,13 @@ open, and each plot can be saved as an image.
 - Fitting `Jc` measured in an applied magnetic field.
 - User accounts, saved sessions, and multi-user operation.
 - Comparing several samples in one view.
+- **Shipping any dataset at all.** Nothing that looks like a measurement is
+  distributed with this tool. Generated data was tried and withdrawn (FR-028);
+  data taken from a published figure was considered and not pursued, because
+  the only candidates with the right gap symmetry have their numbers in figures
+  rather than in tables, and reading points off a plot to ship as an example
+  would put digitisation error into the one file a new user judges the tool by.
+  A user brings their own data, or reads FR-029a and prepares a file.
 
 ## 10. Resolved decisions
 
@@ -340,3 +364,4 @@ open, and each plot can be saved as an image.
 | Command-line access? | Not provided. The browser is the only interface. |
 | Display language? | Korean on screen; English in code and documents. |
 | Second display language? | Not built. Deferred until actually required. |
+| Ship example datasets? | No. Generated ones were shipped and then withdrawn; see FR-028. |

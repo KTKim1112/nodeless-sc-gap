@@ -14,7 +14,7 @@ import io
 
 from fastapi import APIRouter, Response, status
 
-from .. import examples_store, schemas
+from .. import schemas
 from ..core import pipeline
 from ..core.parsing import parse_table
 from ..jobs import store as job_store
@@ -32,17 +32,6 @@ def parse(request: schemas.ParseRequest) -> schemas.ParseResponse:
     caught before any computation and before any unit is chosen (FR-003).
     """
     return schemas.ParseResponse.of(parse_table(request.text, request.comment_prefix))
-
-
-@router.get("/examples", response_model=list[schemas.ExampleSummary], tags=["data"])
-def list_examples() -> list[dict]:
-    """The built-in example datasets (FR-028)."""
-    return examples_store.summaries()
-
-
-@router.get("/examples/{name}", response_model=schemas.Example, tags=["data"])
-def get_example(name: str) -> dict:
-    return examples_store.load(name)
 
 
 # --- analysis ----------------------------------------------------------------

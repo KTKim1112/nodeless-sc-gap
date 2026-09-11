@@ -73,7 +73,6 @@ const MESSAGES: Record<string, (p: Params) => string> = {
 
   // --- 기타 ---
   JOB_NOT_FOUND: () => '해당 계산 작업을 찾을 수 없습니다. 서버가 재시작되었을 수 있습니다.',
-  EXAMPLE_NOT_FOUND: (p) => `예제 데이터 "${p.name}"를 찾을 수 없습니다.`,
   NETWORK_UNREACHABLE: () =>
     '서버에 연결할 수 없습니다. 백엔드가 실행 중인지 확인해 주세요.',
   REQUEST_REJECTED: (p) =>

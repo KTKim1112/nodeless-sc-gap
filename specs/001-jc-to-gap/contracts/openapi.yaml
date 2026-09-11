@@ -53,58 +53,6 @@ paths:
                   status: { type: string, enum: [ok] }
                   version: { type: string }
 
-  /api/examples:
-    get:
-      tags: [data]
-      summary: List the built-in example datasets (FR-028)
-      responses:
-        "200":
-          description: Available examples
-          content:
-            application/json:
-              schema:
-                type: array
-                items: { $ref: "#/components/schemas/ExampleSummary" }
-
-  /api/examples/{name}:
-    get:
-      tags: [data]
-      summary: Fetch one built-in example, ready to feed to /api/parse
-      parameters:
-        - name: name
-          in: path
-          required: true
-          schema: { type: string }
-      responses:
-        "200":
-          description: The example
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/Example" }
-        "404":
-          $ref: "#/components/responses/Error"
-
-  /api/parse:
-    post:
-      tags: [data]
-      summary: Interpret raw text as a numeric table and report how it was read (FR-002, FR-003)
-      description: >
-        Performs no physics. Separated from analysis so that a misread file is
-        caught before any computation and before any unit is chosen.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: "#/components/schemas/ParseRequest" }
-      responses:
-        "200":
-          description: How the text was interpreted
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/ParseResponse" }
-        "422":
-          $ref: "#/components/responses/Error"
-
   /api/lambda:
     post:
       tags: [analysis]
@@ -302,27 +250,6 @@ components:
         or drawn independently at each point (INDEPENDENT, appropriate for
         point-to-point measurement scatter). See research R8.3 - the two give
         materially different uncertainties on Delta(0).
-
-    ExampleSummary:
-      type: object
-      required: [name, title, coherence_source, n_points]
-      properties:
-        name: { type: string }
-        title: { type: string }
-        coherence_source: { $ref: "#/components/schemas/CoherenceSource" }
-        n_points: { type: integer }
-
-    Example:
-      allOf:
-        - $ref: "#/components/schemas/ExampleSummary"
-        - type: object
-          required: [text, suggested_settings]
-          properties:
-            text:
-              type: string
-              description: Raw file contents, to be sent to /api/parse unchanged
-            suggested_settings:
-              $ref: "#/components/schemas/Settings"
 
     ParseRequest:
       type: object

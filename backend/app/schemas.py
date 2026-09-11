@@ -440,26 +440,6 @@ class AnalyzeResponse(Model):
         )
 
 
-# --- examples ----------------------------------------------------------------
-
-class ExampleSummary(Model):
-    name: str
-    title: str
-    coherence_source: t.CoherenceSource
-    n_points: int
-    expects_model_preference: bool = Field(
-        description=(
-            "Whether this example's data are clean enough to separate the "
-            "clean and dirty limits. One shipped example is and one is not."
-        )
-    )
-
-
-class Example(ExampleSummary):
-    text: str = Field(description="Raw file contents, to be sent to /api/parse unchanged")
-    suggested_settings: Settings
-
-
 # --- jobs --------------------------------------------------------------------
 
 class JobAccepted(Model):

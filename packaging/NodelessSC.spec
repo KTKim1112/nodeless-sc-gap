@@ -25,9 +25,10 @@ ONEDIR = bool(os.environ.get("NSC_ONEDIR"))
 # `app.resources.root()`, which returns PyInstaller's extraction directory when
 # frozen. Laying them out here exactly as they sit under `backend/` is what
 # makes that one function enough for both cases.
+# Only `static/` now. The shipped example datasets used to be the second entry
+# and FR-028 was withdrawn, so the executable carries no data of any kind.
 datas = [
     (str(BACKEND / "static"), "static"),
-    (str(BACKEND / "examples"), "examples"),
 ]
 
 # uvicorn resolves its loop, HTTP parser, websocket and lifespan

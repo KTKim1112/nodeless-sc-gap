@@ -468,6 +468,68 @@ than by re-deriving it.
 
 ---
 
+## Phase 12 — Removing the shipped datasets
+
+Asked for directly, after a question about where the example data came from.
+The answer was that it came from nowhere: both files were computed from stated
+parameters by a generator in the repository. The objection was not that this
+was hidden -- the header, the generator, the README and both manuals all said
+so -- but that a manufactured dataset should not be shipped beside a
+measurement tool at all.
+
+That objection is right, and it is sharper than it first sounds. A dataset
+distributed with an analysis tool is read as an example of what the tool is
+*for*. Ours put two material names in front of a new user, and a material name
+reads as a measurement of that material whatever the header says.
+
+| Id | Task | Depends on |
+| --- | --- | --- |
+| T1201 | [done] spec: FR-028 withdrawn, AS-9 withdrawn, FR-029a added, section 9 and section 10 record the decision | — |
+| T1202 | [done] `backend/examples/` -> `backend/tests/data/`, renamed for the regime rather than a material | T1201 |
+| T1203 | [done] `examples_store.py` deleted; `/api/examples` and `/api/examples/{name}` removed; `Example`/`ExampleSummary` schemas removed; `EXAMPLE_NOT_FOUND` removed | T1202 |
+| T1204 | [done] `contracts/openapi.yaml` loses both paths and both schemas; frontend types regenerated | T1203 |
+| T1205 | [done] `DataInput.tsx` loses the example buttons and the fetch behind them; `App.tsx` loses `onExampleChosen` | T1204 |
+| T1206 | [done] the placeholder carries the format instead (FR-029a), and the box is tall enough to show all of it | T1205 |
+| T1207 | [done] `NodelessSC.spec` and `Dockerfile` stop copying the directory | T1202 |
+| T1208 | [done] `test_examples.py` -> `test_whole_chain.py`, reading `tests/data/`; `test_api.py` fixture reads the file; `test_resources.py` asserts the directory is gone | T1202 |
+| T1209 | [done] e2e pastes fixture text and sets the settings by hand, in place of `loadExample`; a new test pins that nothing on the page hands out data | T1205 |
+| T1210 | [done] README, both manuals, `quickstart.md`, endpoint counts | T1209 |
+
+**Gate:** nothing that looks like a measurement leaves this repository as part
+of the product, and the verification that needed generated data still runs.
+**Met.** 191 backend tests and 26 e2e tests pass; the executable and the
+container image no longer carry a data directory; `test_the_api_serves_no_data_of_its_own`
+fails if an endpoint serving data comes back.
+
+*What was kept, and why that is not a contradiction.* The same generated files
+are still in the repository, under `backend/tests/data/`. The objection was to
+distributing manufactured measurements, not to testing with known answers --
+and `test_whole_chain.py` is the only test that runs parsing, unit conversion,
+the inversion, the fit and the diagnostics together. No real dataset could
+replace it: no measured film has a `lambda(0)` known independently, so real
+data can only confirm that a number came out, never that it was the right one.
+Deleting the fixtures would have removed the project's ability to detect a
+wrong constant in exchange for nothing.
+
+*What it costs, since the specification says to say so.* A first-time user now
+has to bring a file before anything happens. That is a worse first minute, and
+it was the reason FR-028 existed. The placeholder does what it can.
+
+*What was searched for first.* A real, citable dataset was looked for before
+accepting the loss: the source paper is CC BY but tabulates no `Jc(T)`, the
+open repositories carry nothing for an s-wave film, and the public REBCO data
+are d-wave, which section 9 excludes. Every candidate has its numbers in a
+figure, and reading points off a plot would have put digitisation error into
+the one file a new user judges the tool by. Recorded in section 9 so the search
+does not have to be repeated.
+
+*One test that had to be rewritten twice.* The check that no data endpoint
+survives first asserted a 404 from `/api/examples`, which passes for the wrong
+reason -- the single-page catch-all answers any unknown GET with the page
+itself. Then it read `app.routes`, which holds an included router rather than
+its paths, so `/api/parse` was not in it either. It reads the generated OpenAPI
+schema now, which is the list that is actually published.
+
 ## Requirement coverage
 
 Every functional requirement maps to at least one task.
@@ -489,6 +551,7 @@ Every functional requirement maps to at least one task.
 | FR-013 | T109, T307 | FR-027 | T207, T401, T403, T1006 |
 | | | FR-026a | T1001, T1003, T1007, T1008, T1103, T1105, T1109, T1110 |
 | | | FR-027a | T805, T806, T807, T808, T1108 |
-| FR-014 | T109, T308 | FR-028 | T122, T206, T404 |
+| FR-014 | T109, T308 | FR-028 | *withdrawn* by T1201 |
 | | | FR-029 | T111, T120b, T501 |
+| | | FR-029a | T1201, T1206, T1209 |
 | | | FR-030 | T109, T111, T503 |

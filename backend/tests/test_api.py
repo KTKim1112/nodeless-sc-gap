@@ -30,9 +30,16 @@ def client() -> TestClient:
 
 @pytest.fixture(scope="module")
 def example_request(client) -> dict:
-    """A valid /api/analyze body, built the way the frontend will build one."""
-    example = client.get("/api/examples/nbti_like").json()
-    values = client.post("/api/parse", json={"text": example["text"]}).json()["values"]
+    """A valid /api/analyze body, built the way the frontend will build one.
+
+    The text comes from a fixture file rather than from the API, because there
+    is no longer an endpoint that serves data: FR-028 was withdrawn and nothing
+    is shipped. It still goes through /api/parse, since what is being exercised
+    is the path a user's own file takes.
+    """
+    text = (pathlib.Path(__file__).resolve().parent / "data"
+            / "weak_coupling_clean_hc2.txt").read_text(encoding="utf-8")
+    values = client.post("/api/parse", json={"text": text}).json()["values"]
     return {
         "dataset": {
             "temperature_K": [row[0] for row in values],
@@ -40,7 +47,11 @@ def example_request(client) -> dict:
             "jc_unit": "A_PER_CM2",
             "hc2_T": [row[2] for row in values],
         },
-        "settings": example["suggested_settings"],
+        "settings": {
+            "coherence_source": "FROM_HC2",
+            "gap_model": "CLEAN",
+            "fit_route": "TWO_STEP",
+        },
     }
 
 
@@ -52,18 +63,26 @@ def test_health(client):
     assert response.json()["status"] == "ok"
 
 
-def test_examples_are_listed_and_fetchable(client):
-    listing = client.get("/api/examples")
-    assert listing.status_code == 200
-    entries = listing.json()
-    assert len(entries) >= 2
+def test_the_api_serves_no_data_of_its_own(client):
+    """FR-028 was withdrawn, and withdrawing it has to be enforced.
 
-    for entry in entries:
-        example = client.get(f"/api/examples/{entry['name']}")
-        assert example.status_code == 200
-        body = example.json()
-        assert body["text"].strip()
-        assert body["suggested_settings"]["coherence_source"] == entry["coherence_source"]
+    Deleting the endpoints is not enough on its own: the reason they are gone
+    is that nothing manufactured should be distributed as though it were a
+    measurement, and the way that comes back is by someone re-adding a
+    convenience endpoint. This fails if one appears.
+    """
+    # Read off the generated schema rather than app.routes. The endpoints are
+    # on an included router, so app.routes holds the router rather than its
+    # paths, and a check against it passes whatever the router contains.
+    #
+    # Not asserted through HTTP either: the single-page catch-all answers any
+    # unknown GET with the page itself, so /api/examples returns 200 and always
+    # would. The published path list is the thing that can actually regress.
+    paths = client.get("/openapi.json").json()["paths"]
+    assert "/api/parse" in paths
+    assert not [p for p in paths if "example" in p.lower()]
+    schemas = client.get("/openapi.json").json()["components"]["schemas"]
+    assert not [name for name in schemas if "xample" in name]
 
 
 def test_parse_reports_how_the_text_was_read(client):
@@ -287,9 +306,7 @@ def test_kappa_between_the_floor_and_type_ii(client, example_request):
     assert client.post("/api/analyze", json=body).json()["code"] == "NOT_TYPE_II"
 
 
-def test_unknown_example_and_job_are_404(client):
-    assert client.get("/api/examples/no-such-thing").status_code == 404
-    assert client.get("/api/examples/no-such-thing").json()["code"] == "EXAMPLE_NOT_FOUND"
+def test_an_unknown_job_is_404(client):
     assert client.get("/api/jobs/deadbeef").status_code == 404
     assert client.get("/api/jobs/deadbeef").json()["code"] == "JOB_NOT_FOUND"
 
@@ -361,8 +378,6 @@ def _endpoint_responses(client, example_request):
     broken = json.loads(json.dumps(example_request))
     broken["dataset"]["jc"][2] = -1.0
     yield client.get("/api/health")
-    yield client.get("/api/examples")
-    yield client.get("/api/examples/nbti_like")
     yield client.post("/api/parse", json={"text": "1 2 3\n4 5 6\n7 8 9\n1 1 1\n"})
     yield client.post("/api/lambda", json=example_request)
     yield client.post("/api/analyze", json=example_request)
@@ -395,8 +410,7 @@ def test_every_failure_has_the_same_shape(client, example_request):
     broken = json.loads(json.dumps(example_request))
     broken["dataset"]["jc"][2] = -1.0
     for response in (client.post("/api/analyze", json=broken),
-                     client.get("/api/jobs/nope"),
-                     client.get("/api/examples/nope")):
+                     client.get("/api/jobs/nope")):
         payload = response.json()
         assert set(payload) == {"code", "params"}
         assert payload["code"].isupper() and payload["code"].isascii()

@@ -23,8 +23,6 @@ export type DiagnosticReport = S['DiagnosticReportOut']
 export type UncertaintyResult = S['UncertaintyResultOut']
 export type ParameterDistribution = S['ParameterDistribution']
 export type SuperfluidCurve = S['SuperfluidCurveOut']
-export type ExampleSummary = S['ExampleSummary']
-export type Example = S['Example']
 export type JobStatus = S['JobStatus']
 export type WarningOut = S['WarningOut']
 export type ErrorPayload = S['ErrorPayload']
@@ -102,10 +100,6 @@ export const api = {
   health: () => request<{ status: string; version: string }>('/api/health'),
 
   parse: (text: string) => post<ParseResponse>('/api/parse', { text }),
-
-  examples: () => request<ExampleSummary[]>('/api/examples'),
-
-  example: (name: string) => request<Example>(`/api/examples/${encodeURIComponent(name)}`),
 
   lambdaTable: (body: AnalyzeRequest) => post<LambdaResponse>('/api/lambda', body),
 

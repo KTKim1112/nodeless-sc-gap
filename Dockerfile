@@ -46,11 +46,10 @@ COPY backend/pyproject.toml ./
 RUN mkdir -p app && touch app/__init__.py && pip install --no-cache-dir .
 
 COPY backend/app ./app
-COPY backend/examples ./examples
 COPY --from=frontend /build/dist ./static
 
-# A non-root user, because nothing here needs to write anywhere. The examples
-# and the code are read-only as far as the application is concerned.
+# A non-root user, because nothing here needs to write anywhere. The code and
+# the built page are read-only as far as the application is concerned.
 RUN useradd --create-home --uid 10001 app && chown -R app:app /app
 USER app
 

@@ -1,12 +1,19 @@
-"""The built-in examples must actually work. FR-028, AS-9.
+"""The whole chain, on data whose answer is known.
 
-These run the full chain on the shipped example files, starting from the raw
-text exactly as a user would. That exercises parsing, unit conversion, the
-inversion, the fit, and the diagnostics together, which no other test does.
+These run parsing, unit conversion, the inversion, the fit and the diagnostics
+together, starting from raw text exactly as a user's file arrives. No other
+test covers the chain end to end.
 
-Because the examples were generated from stated parameters, they double as
-regression fixtures: the recovered values are checked against the truth
-recorded in the manifest.
+The fixtures were generated from stated parameters, so the recovered values are
+checked against the truth recorded in the manifest. That is the part no real
+measurement could stand in for: no measured film has a known `lambda(0)`, so a
+real dataset could only confirm that some number came out, not that it was the
+right one.
+
+They were once shipped with the application as built-in examples. FR-028 was
+withdrawn -- a manufactured dataset distributed beside a measurement tool reads
+as a claim about real samples -- so they live under `tests/data/` now, where
+they are fixtures and are not distributed at all.
 """
 
 from __future__ import annotations
@@ -30,7 +37,7 @@ from app.core.units import jc_to_si
 from app.core.types import JcUnit
 from app.core.validation import build_dataset
 
-EXAMPLES = pathlib.Path(__file__).resolve().parents[1] / "examples"
+EXAMPLES = pathlib.Path(__file__).resolve().parent / "data"
 MANIFEST = json.loads((EXAMPLES / "manifest.json").read_text(encoding="utf-8"))
 
 
@@ -127,13 +134,13 @@ def test_example_declares_a_preference_only_when_its_data_support_one(entry):
 
 
 def test_the_weak_coupling_example_is_classified_as_weak_coupling():
-    entry = next(e for e in MANIFEST if e["name"] == "nbti_like")
+    entry = next(e for e in MANIFEST if e["name"] == "weak_coupling_clean_hc2")
     result, _ = _analyse(entry)
     assert result.diagnostics.coupling_regime is CouplingRegime.WEAK_COUPLING_BCS
 
 
 def test_the_strong_coupling_example_is_classified_as_stronger():
-    entry = next(e for e in MANIFEST if e["name"] == "nb3sn_like")
+    entry = next(e for e in MANIFEST if e["name"] == "strong_coupling_dirty_kappa")
     result, _ = _analyse(entry)
     assert result.diagnostics.coupling_regime is CouplingRegime.MODERATELY_STRONG
 

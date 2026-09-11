@@ -1,22 +1,30 @@
-"""Regenerate the built-in example datasets.
+"""Regenerate the whole-chain test fixtures.
 
 Run from the backend directory:
 
-    python examples/generate.py
+    python tests/data/generate.py
 
-The examples exist for two reasons (FR-028). A first-time user needs something
-to press before they have prepared a file of their own, and development needs a
-fixture whose correct answer is known, so that "did I break something?" has an
-answer that does not depend on anyone's real data.
+These used to be shipped with the application as built-in examples, and are
+not any more: FR-028 was withdrawn because a manufactured dataset distributed
+beside a measurement tool reads as a claim about real samples. They live here
+now, where they are fixtures rather than examples of anything.
 
-They are therefore generated from stated parameters rather than copied from a
-paper, and the parameters are written into the file header. Realistic scatter is
-added so that the fit has something to do and reports a standard error; without
-it every residual would be zero and the uncertainty machinery would never be
-exercised by the examples.
+They are still needed, and nothing real could replace them. `test_examples.py`
+runs raw text through parsing, unit conversion, the inversion, the fit and the
+diagnostics together and checks the recovered values against the truth in the
+manifest. No measured film has a known `lambda(0)` to check against, so a real
+dataset cannot perform that test at all -- it can only confirm that some number
+came out.
 
-This script is a development tool, not part of the application. It is the only
-place in the project that writes a file.
+Generated from stated parameters, with the parameters written into each file
+header. Realistic scatter is added so the fit has something to do and reports a
+standard error; without it every residual would be zero and the uncertainty
+machinery would never be exercised.
+
+Named for the regime each one puts the fitter in rather than for a material.
+They were called `nbti_like` and `nb3sn_like`, and a material name reads as a
+measurement of that material however loudly the header says otherwise, which is
+the same mistake in miniature that FR-028 was withdrawn over.
 """
 
 from __future__ import annotations
@@ -58,16 +66,17 @@ def build(*, tc, lambda0_nm, coupling_ratio, kappa, model, n_points,
 
 EXAMPLES = [
     {
-        "name": "nbti_like",
-        "title": "NbTi-like film: weak-coupling, clean limit, with Hc2",
+        "name": "weak_coupling_clean_hc2",
+        "title": "Weak-coupling, clean limit, coherence length from Hc2",
         "note": (
-            "Roughly the parameters of a NbTi thin film. Single-band s-wave, "
-            "weak-coupling, no nodes, comfortably strong type-II. The coupling "
-            "ratio is the BCS value, so the analysis reports WEAK_COUPLING_BCS. "
+            "Parameters in the region a clean low-Tc film occupies. Single-band "
+            "s-wave, weak-coupling, no nodes, comfortably strong type-II. The "
+            "coupling ratio is the BCS value, so the analysis reports "
+            "WEAK_COUPLING_BCS. "
             "The scatter on Jc is deliberately small, 0.2 %, because that is "
             "what it takes to tell the clean limit from the dirty limit at all; "
-            "this example therefore demonstrates a decisive model preference. "
-            "See nb3sn_like for what happens at realistic scatter."
+            "this fixture therefore pins a decisive model preference. "
+            "See strong_coupling_dirty_kappa for what happens at realistic scatter."
         ),
         "coherence_source": "FROM_HC2",
         "columns": ["T_K", "Jc_A_per_cm2", "Hc2_T"],
@@ -83,17 +92,17 @@ EXAMPLES = [
         },
     },
     {
-        "name": "nb3sn_like",
-        "title": "Nb3Sn-like film: strong-coupling, dirty limit, fixed kappa",
+        "name": "strong_coupling_dirty_kappa",
+        "title": "Strong-coupling, dirty limit, fixed Ginzburg-Landau parameter",
         "note": (
-            "Roughly the parameters of an Nb3Sn film. Still single-band and "
-            "nodeless, but strongly coupled and in the dirty limit, so the "
-            "analysis reports MODERATELY_STRONG. No Hc2 column, so a fixed "
+            "Parameters in the region a dirty strong-coupling film occupies. "
+            "Still single-band and nodeless, but strongly coupled and dirty, so "
+            "the analysis reports MODERATELY_STRONG. No Hc2 column, so a fixed "
             "kappa is used. The scatter on Jc is a realistic 3 %, at which the "
             "clean and dirty limits are NOT separable: the analysis reports "
             "MODELS_INDISTINGUISHABLE and declines to name a preferred model. "
             "That is the correct answer for data of this quality, and it is "
-            "why this example is shipped alongside nbti_like."
+            "why this fixture exists alongside weak_coupling_clean_hc2."
         ),
         "coherence_source": "FIXED_KAPPA",
         "columns": ["T_K", "Jc_A_per_cm2"],
@@ -125,7 +134,7 @@ def main() -> None:
         lines += ["# " + line for line in _wrap(spec["note"], 74)]
         lines += [
             "#",
-            "# Synthetic data, generated by examples/generate.py from these values:",
+            "# Generated by tests/data/generate.py from these values:",
             f"#     Tc            = {truth['tc']} K",
             f"#     lambda(0)     = {truth['lambda0_nm']} nm",
             f"#     2 D(0)/kB Tc  = {truth['coupling_ratio']}"
@@ -136,8 +145,8 @@ def main() -> None:
             # which contradicted the prose eleven lines above it in the same file.
             f"#     Jc scatter    = {truth['jc_scatter'] * 100:g} % (1 sigma, log-normal)",
             "#",
-            "# A correct analysis recovers those values. That is what makes this",
-            "# usable as a regression fixture as well as a demonstration.",
+            "# A correct analysis recovers those values. That is the whole point:",
+            "# no measured film has a known lambda(0) to check a fit against.",
             "#",
             "# " + "  ".join(f"{name:>16}" for name in spec["columns"]),
         ]

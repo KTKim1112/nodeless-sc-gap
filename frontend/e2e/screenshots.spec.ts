@@ -1,4 +1,6 @@
 import { test, expect } from '@playwright/test'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 
 /**
  * Not assertions: a way to look at the page.
@@ -6,9 +8,15 @@ import { test, expect } from '@playwright/test'
  * Captures the states worth reviewing by eye into e2e/.shots/, so that layout,
  * spacing, and the Korean wording can be judged rather than guessed at. Run
  * with `npm run shots`.
+ *
+ * The data are pasted from the backend's fixtures. Nothing is shipped with the
+ * application to press any more (FR-028 withdrawn), so the first screenshot is
+ * also the first thing a new user actually sees.
  */
 
 const SHOTS = 'e2e/.shots'
+const FIXTURES = join('..', 'backend', 'tests', 'data')
+const read = (file: string) => readFileSync(join(FIXTURES, file), 'utf8')
 
 test('capture the states worth looking at', async ({ page }) => {
   test.setTimeout(120_000)
@@ -18,8 +26,8 @@ test('capture the states worth looking at', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Nodeless 초전도체 갭 추출' })).toBeVisible()
   await page.screenshot({ path: `${SHOTS}/01-empty.png`, fullPage: true })
 
-  // 2. An example loaded: the column preview and the settings it suggests.
-  await page.getByRole('button', { name: 'nbti_like' }).click()
+  // 2. Data pasted in: the column preview and what it made of the columns.
+  await page.locator('textarea.data-input').fill(read('weak_coupling_clean_hc2.txt'))
   await expect(page.getByRole('heading', { name: '읽은 결과 확인' })).toBeVisible()
   await page.screenshot({ path: `${SHOTS}/02-example-loaded.png`, fullPage: true })
 
@@ -54,13 +62,17 @@ test('capture the states worth looking at', async ({ page }) => {
   await page.locator('section.card', { hasText: '가정과 주의사항' })
     .screenshot({ path: `${SHOTS}/05-assumptions.png` })
 
-  // 5. The other example, whose data cannot separate the two gap models.
+  // 5. The other fixture, whose scatter cannot separate the two gap models.
   //
   // The assertions here are not decoration. Twice this step silently captured
-  // the *previous* example's result, because the analyse button was still
+  // the *previous* dataset's result, because the analyse button was still
   // enabled while the newly pasted text had not been parsed yet. Checking that
-  // the settings actually changed is what caught it.
-  await page.getByRole('button', { name: 'nb3sn_like' }).click()
+  // the settings actually changed is what caught it -- and they are set by hand
+  // now that pasting no longer brings suggested settings with it.
+  await page.locator('textarea.data-input').fill(read('strong_coupling_dirty_kappa.txt'))
+  await page.getByLabel('코히런스 길이 ξ 결정 방식').selectOption('FIXED_KAPPA')
+  await page.getByLabel('κ = λ/ξ').fill('30')
+  await page.getByLabel('갭 모델').selectOption('DIRTY')
   await expect(page.locator('section.card', { hasText: '분석 설정' })
     .getByRole('combobox').nth(1)).toHaveValue('FIXED_KAPPA')
   await page.getByRole('button', { name: '분석 실행' }).click()
@@ -106,7 +118,8 @@ test('capture the states worth looking at', async ({ page }) => {
   // 7. Narrow viewport, to see whether anything overflows.
   await page.setViewportSize({ width: 420, height: 900 })
   await page.goto('/')
-  await page.getByRole('button', { name: 'nbti_like' }).click()
+  await page.locator('textarea.data-input').fill(read('weak_coupling_clean_hc2.txt'))
+  await expect(page.getByRole('heading', { name: '읽은 결과 확인' })).toBeVisible()
   await page.getByRole('button', { name: '분석 실행' }).click()
   await expect(page.getByRole('heading', { name: '피팅 결과' })).toBeVisible()
   await page.screenshot({ path: `${SHOTS}/08-narrow.png`, fullPage: true })

@@ -83,7 +83,8 @@ The prose below remains as the description of what each step is for, and steps
 
 ### 1. The tool works before you have data (AS-9, FR-028)
 
-Open the page. Choose the built-in example `nbti_like`. Confirm the column
+Open the page. Paste `backend/tests/data/weak_coupling_clean_hc2.txt`, or open
+it with the file button. Confirm the column
 preview shows three columns and that the row count matches the file.
 
 **Pass:** the analysis completes and a gap value appears without any file having
@@ -91,16 +92,16 @@ been prepared.
 
 ### 2. Full analysis from the upper critical field (AS-1, FR-006 to FR-012)
 
-With the same example: coherence source `FROM_HC2`, gap model `CLEAN`, route
+With the same data: coherence source `FROM_HC2`, gap model `CLEAN`, route
 `TWO_STEP`.
 
 **Pass:** a per-temperature table with `xi`, `lambda`, `kappa`; fitted
 `lambda(0)` in nm, `Delta(0)` in meV, `Tc` in K, each with an uncertainty; and a
-coupling ratio near 3.5 for a weak-coupling example.
+coupling ratio near 3.5, which is what that fixture was generated with.
 
 ### 3. Fixed Ginzburg-Landau parameter (AS-3, FR-006)
 
-Choose the built-in example `nb3sn_like`, coherence source `FIXED_KAPPA`,
+Paste `backend/tests/data/strong_coupling_dirty_kappa.txt`, coherence source `FIXED_KAPPA`,
 `kappa = 30`.
 
 **Pass:** results appear, and the table now also reports the implied `xi(T)`.
@@ -119,9 +120,10 @@ Switch `gap_model` between `CLEAN` and `DIRTY`.
 
 **Pass:** the diagnostics panel reports both reduced chi-squared values, the
 Akaike separation, and either names a preferred model or states that the data do
-not distinguish them. On `nbti_like` it names one; on `nb3sn_like` it declines,
+not distinguish them. On the 0.2 %-scatter fixture it names one; on the 3 % one
+it declines,
 because 3 % scatter on `Jc` cannot separate the two (research R10). Both are
-correct answers and the contrast is why two examples are shipped.
+correct answers, and the contrast is why there are two fixtures.
 
 ### 6. Uncertainty propagation (AS-6, FR-015 to FR-018)
 

@@ -88,13 +88,17 @@ fixed Ginzburg-Landau parameter. It reports:
 - and, alongside every result, the assumptions it rests on and any that the data
   appear to violate.
 
-Two built-in examples run the whole thing without any data of your own. **They
-are synthetic**, computed by `backend/examples/generate.py` from parameters
-chosen to sit in the region NbTi and Nb3Sn films occupy, not measured on
-anything and not taken from a paper. Each file's header states the values it
-was built from, so a correct analysis has a known right answer and the examples
-serve as regression fixtures as well as demonstrations. No measured dataset is
-distributed with this repository.
+**No dataset is distributed with this tool.** There were two generated ones,
+so that a new user had something to press; they were withdrawn. A manufactured
+dataset shipped beside a measurement tool reads as an example of what the tool
+is for, and that is a claim about real samples nobody took an instrument to,
+however plainly the file says otherwise. Bring your own file: the empty page
+shows the column layout it expects.
+
+Generated data with a known answer has not gone away, because nothing else can
+check the chain end to end -- no measured film has a `lambda(0)` known
+independently to check a fit against. It lives in `backend/tests/data/` now,
+where it is a fixture and is not distributed as an example of anything.
 
 ### When this is the right tool
 
@@ -203,7 +207,7 @@ give gaps about 20 % apart, so which one was used has to be reported.
     specs/001-jc-to-gap/              what is being built and why, and the physics
     backend/app/core/                 the physics. No web framework, ever
     backend/app/                      the HTTP layer over it
-    backend/tests/                    191 tests
+    backend/tests/                    191 tests, and the fixtures they run on
     frontend/src/                     the page. Its Korean lives here
     frontend/e2e/                     the acceptance walkthrough, executed
     docs/                             how this was built, for the maintainer

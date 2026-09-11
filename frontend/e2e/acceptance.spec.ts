@@ -1,4 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 
 /**
  * The acceptance walkthrough of specs/001-jc-to-gap/quickstart.md, executed.
@@ -6,14 +8,39 @@ import { test, expect, type Page } from '@playwright/test'
  * Every test here names the scenario or requirement it stands for. A scenario
  * that is only ever performed by hand is a scenario that quietly stops being
  * performed, and these are the ones that decide whether the feature is done.
+ *
+ * The data are pasted in from the backend's fixtures rather than loaded from
+ * the application. FR-028 was withdrawn and the built-in examples went with
+ * it, so what these tests now drive is the path a user's own file takes: text
+ * into the box, settings chosen by hand.
  */
 
 const heading = (page: Page, name: string) => page.getByRole('heading', { name })
 
-async function loadExample(page: Page, name: string) {
+const FIXTURES = join('..', 'backend', 'tests', 'data')
+
+/** The two fixtures, with the settings each is meant to be read under.
+ *
+ * `hc2` needs none: the page already defaults to FROM_HC2, CLEAN, TWO_STEP,
+ * which is worth saying here because a test below reads as though it set
+ * nothing. `kappa` has no Hc2 column and has to be told so.
+ */
+const DATA = {
+  hc2: 'weak_coupling_clean_hc2.txt',
+  kappa: 'strong_coupling_dirty_kappa.txt',
+} as const
+
+async function loadFixture(page: Page, which: keyof typeof DATA) {
   await page.goto('/')
-  await page.getByRole('button', { name }).click()
+  await page.locator('textarea.data-input')
+    .fill(readFileSync(join(FIXTURES, DATA[which]), 'utf8'))
   await expect(heading(page, '읽은 결과 확인')).toBeVisible()
+
+  if (which === 'kappa') {
+    await page.getByLabel('코히런스 길이 ξ 결정 방식').selectOption('FIXED_KAPPA')
+    await page.getByLabel('κ = λ/ξ').fill('30')
+    await page.getByLabel('갭 모델').selectOption('DIRTY')
+  }
 }
 
 async function analyse(page: Page) {
@@ -37,16 +64,38 @@ async function fitNumber(page: Page, quantity: string): Promise<number> {
   return Number(text.split('±')[0].trim())
 }
 
-// --- AS-9, FR-028: the tool works before you have data ----------------------
+// --- FR-029a: what an empty page offers, now that it offers no data ---------
 
-test('a first-time user can run the whole thing from a built-in example', async ({ page }) => {
-  await page.goto('/')
-  await expect(heading(page, 'Nodeless 초전도체 갭 추출')).toBeVisible()
+test('the empty page explains the format and hands out nothing to run',
+  async ({ page }) => {
+    await page.goto('/')
+    await expect(heading(page, 'Nodeless 초전도체 갭 추출')).toBeVisible()
 
-  // No data yet, so nothing can be analysed.
-  await expect(page.getByRole('button', { name: '분석 실행' })).toBeDisabled()
+    // No data yet, so nothing can be analysed.
+    await expect(page.getByRole('button', { name: '분석 실행' })).toBeDisabled()
 
-  await page.getByRole('button', { name: 'nbti_like' }).click()
+    // And nothing on the page will supply any. FR-028 was withdrawn because a
+    // manufactured dataset shipped beside a measurement tool reads as a claim
+    // about real samples, and the buttons that loaded one are gone. Asserted
+    // rather than assumed, because putting one back would be an easy kindness.
+    const toolbar = page.locator('section.card', { hasText: '1. 데이터 입력' })
+    await expect(toolbar.getByRole('button')).toHaveCount(2)   // 파일 열기, 지우기
+    await expect(page.getByText('예제', { exact: false })).toHaveCount(0)
+
+    // What replaces it is the layout itself.
+    const box = page.locator('textarea.data-input')
+    const placeholder = await box.getAttribute('placeholder')
+    expect(placeholder).toContain('T_K')
+    expect(placeholder).toContain('Hc2_T')
+    expect(placeholder).toContain('최소 4점')
+    // The illustrative rows must be too few to run, so that a format example
+    // cannot be mistaken for a dataset.
+    const rows = placeholder!.split('\n').filter(l => /^\s+[\d.]+\s/.test(l))
+    expect(rows.length).toBeLessThan(4)
+  })
+
+test('a pasted file runs the whole thing', async ({ page }) => {
+  await loadFixture(page, 'hc2')
   await expect(page.getByText('22개 데이터, 3개 열')).toBeVisible()
   await analyse(page)
   await expect(fitValue(page, 'Δ(0)')).not.toBeEmpty()
@@ -55,10 +104,10 @@ test('a first-time user can run the whole thing from a built-in example', async 
 // --- AS-1, FR-006..FR-012: analysis from the upper critical field -----------
 
 test('recovers the parameters the example was generated from', async ({ page }) => {
-  await loadExample(page, 'nbti_like')
+  await loadFixture(page, 'hc2')
   await analyse(page)
 
-  // The header of nbti_like states lambda(0) = 250 nm, Delta(0) = 1.3993 meV,
+  // The fixture's header states lambda(0) = 250 nm, Delta(0) = 1.3993 meV,
   // Tc = 9.2 K. Scatter on Jc is 0.2 %, so a few tenths of a per cent is the
   // most that should be missed.
   expect(await fitNumber(page, 'λ(0)')).toBeCloseTo(250.0, 0)
@@ -75,8 +124,7 @@ test('recovers the parameters the example was generated from', async ({ page }) 
 // --- AS-3, FR-006: the fixed-kappa route ------------------------------------
 
 test('the fixed-kappa route reports the coherence length it implies', async ({ page }) => {
-  await loadExample(page, 'nb3sn_like')
-  await expect(page.getByLabel('κ = λ/ξ')).toHaveValue('30')
+  await loadFixture(page, 'kappa')
   await analyse(page)
 
   expect(await fitNumber(page, 'λ(0)')).toBeCloseTo(120, -1)
@@ -89,7 +137,7 @@ test('the fixed-kappa route reports the coherence length it implies', async ({ p
 // --- AS-5, FR-011: the two routes agree -------------------------------------
 
 test('the two extraction routes agree', async ({ page }) => {
-  await loadExample(page, 'nbti_like')
+  await loadFixture(page, 'hc2')
   await analyse(page)
   const twoStep = await fitNumber(page, 'Δ(0)')
 
@@ -103,14 +151,14 @@ test('the two extraction routes agree', async ({ page }) => {
 // --- AS-4, FR-020: the models are compared ----------------------------------
 
 test('a decisive model comparison is reported when the data support one', async ({ page }) => {
-  await loadExample(page, 'nbti_like')   // 0.2 % scatter: separable
+  await loadFixture(page, 'hc2')   // 0.2 % scatter: separable
   await analyse(page)
   const assumptions = page.locator('section.card', { hasText: '가정과 주의사항' })
   await expect(assumptions).not.toContainText('판정할 수 없습니다')
 })
 
 test('and refused when they do not', async ({ page }) => {
-  await loadExample(page, 'nb3sn_like')  // 3 % scatter: not separable
+  await loadFixture(page, 'kappa')  // 3 % scatter: not separable
   await analyse(page)
   const assumptions = page.locator('section.card', { hasText: '가정과 주의사항' })
   await expect(assumptions).toContainText('판정할 수 없습니다')
@@ -120,7 +168,7 @@ test('and refused when they do not', async ({ page }) => {
 // --- AS-7, FR-022: an assumption that fails ---------------------------------
 
 test('a kappa below the model floor is refused with an explanation', async ({ page }) => {
-  await loadExample(page, 'nb3sn_like')
+  await loadFixture(page, 'kappa')
   await page.getByLabel('κ = λ/ξ').fill('0.5')
   await page.getByRole('button', { name: '분석 실행' }).click()
 
@@ -131,7 +179,7 @@ test('a kappa below the model floor is refused with an explanation', async ({ pa
 })
 
 test('a kappa inside type-II but near the boundary warns rather than refuses', async ({ page }) => {
-  await loadExample(page, 'nb3sn_like')
+  await loadFixture(page, 'kappa')
   await page.getByLabel('κ = λ/ξ').fill('2')
   await analyse(page)
   await expect(page.locator('section.card', { hasText: '가정과 주의사항' }))
@@ -141,8 +189,8 @@ test('a kappa inside type-II but near the boundary warns rather than refuses', a
 // --- FR-024: assumptions travel with the result -----------------------------
 
 test('the self-field requirement is stated on every result', async ({ page }) => {
-  for (const example of ['nbti_like', 'nb3sn_like']) {
-    await loadExample(page, example)
+  for (const which of ['hc2', 'kappa'] as const) {
+    await loadFixture(page, which)
     await analyse(page)
     await expect(page.locator('section.card', { hasText: '가정과 주의사항' }))
       .toContainText('self-field 조건에서 transport 방식')
@@ -150,7 +198,7 @@ test('the self-field requirement is stated on every result', async ({ page }) =>
 })
 
 test('a thickness beyond the thin-film regime warns', async ({ page }) => {
-  await loadExample(page, 'nbti_like')
+  await loadFixture(page, 'hc2')
   await page.getByLabel('시료 두께 [nm]').fill('5000')     // lambda(0) is 250 nm
   await analyse(page)
   await expect(page.locator('section.card', { hasText: '가정과 주의사항' }))
@@ -177,7 +225,7 @@ test('too few points is refused', async ({ page }) => {
 })
 
 test('the column preview says which column is being used as what', async ({ page }) => {
-  await loadExample(page, 'nbti_like')
+  await loadFixture(page, 'hc2')
   const preview = page.locator('section.card', { hasText: '읽은 결과 확인' })
   await expect(preview).toContainText('온도 T')
   await expect(preview).toContainText('Hc2')
@@ -190,18 +238,26 @@ test('the column preview says which column is being used as what', async ({ page
 test('changing the data cannot leave the previous result on screen', async ({ page }) => {
   // The analyse button must not be usable while the text on screen has not been
   // parsed yet, or a paste followed by a quick click analyses the old dataset.
-  await loadExample(page, 'nbti_like')
+  await loadFixture(page, 'hc2')
   await analyse(page)
-  await page.getByRole('button', { name: 'nb3sn_like' }).click()
+
+  await page.locator('textarea.data-input')
+    .fill(readFileSync(join(FIXTURES, DATA.kappa), 'utf8'))
   await expect(heading(page, '피팅 결과')).toHaveCount(0)
+
+  await page.getByLabel('코히런스 길이 ξ 결정 방식').selectOption('FIXED_KAPPA')
+  await page.getByLabel('κ = λ/ξ').fill('30')
+  await page.getByLabel('갭 모델').selectOption('DIRTY')
   await analyse(page)
-  await expect(page.getByLabel('κ = λ/ξ')).toHaveValue('30')
+  // The second dataset's own answer, not the first one's: lambda(0) is 120 nm
+  // here and 250 nm there, so a stale result could not pass this.
+  expect(await fitNumber(page, 'λ(0)')).toBeCloseTo(120, -1)
 })
 
 // --- AS-10, FR-027: taking the results away ---------------------------------
 
 test('the results can be downloaded as a table with units in the headers', async ({ page }) => {
-  await loadExample(page, 'nbti_like')
+  await loadFixture(page, 'hc2')
   await analyse(page)
 
   const [download] = await Promise.all([
@@ -236,7 +292,7 @@ test('the results can be downloaded as a table with units in the headers', async
 
 test('the fitted curve can be downloaded and starts on the reported intercept',
   async ({ page }) => {
-    await loadExample(page, 'nbti_like')
+    await loadFixture(page, 'hc2')
     await analyse(page)
 
     // The number the summary reports, as the user reads it off the screen.
@@ -280,7 +336,7 @@ test('the fitted curve can be downloaded and starts on the reported intercept',
 // --- FR-026, FR-019: the plots ----------------------------------------------
 
 test('all four plots draw', async ({ page }) => {
-  await loadExample(page, 'nbti_like')
+  await loadFixture(page, 'hc2')
   await analyse(page)
   const charts = page.locator('section.card').filter({
     has: page.getByRole('heading', { name: '그래프', exact: true }),
@@ -297,7 +353,7 @@ test('all four plots draw', async ({ page }) => {
 
 test('the Jc plot shows the measurement and the fitted curve together',
   async ({ page }) => {
-    await loadExample(page, 'nbti_like')
+    await loadFixture(page, 'hc2')
     await analyse(page)
     const charts = page.locator('section.card').filter({
       has: page.getByRole('heading', { name: '그래프', exact: true }),
@@ -314,7 +370,7 @@ test('the Jc plot shows the measurement and the fitted curve together',
   })
 
 test('the plot offers a PNG download', async ({ page }) => {
-  await loadExample(page, 'nbti_like')
+  await loadFixture(page, 'hc2')
   await analyse(page)
   const charts = page.locator('section.card').filter({
     has: page.getByRole('heading', { name: '그래프', exact: true }),
@@ -326,7 +382,7 @@ test('the plot offers a PNG download', async ({ page }) => {
 // --- FR-019 to FR-021: the diagnostics panel --------------------------------
 
 test('the diagnostics panel reports the basis for its judgements', async ({ page }) => {
-  await loadExample(page, 'nbti_like')
+  await loadFixture(page, 'hc2')
   await analyse(page)
   const panel = page.locator('section.card', { hasText: '피팅 품질 진단' })
 
@@ -340,7 +396,7 @@ test('the diagnostics panel reports the basis for its judgements', async ({ page
 })
 
 test('the diagnostics panel declines to choose when it should', async ({ page }) => {
-  await loadExample(page, 'nb3sn_like')
+  await loadFixture(page, 'kappa')
   await analyse(page)
   await expect(page.locator('section.card', { hasText: '피팅 품질 진단' }))
     .toContainText('판정하지 않습니다')
@@ -350,7 +406,7 @@ test('the diagnostics panel declines to choose when it should', async ({ page })
 
 test('uncertainty propagation runs in the background and reports intervals', async ({ page }) => {
   test.setTimeout(180_000)
-  await loadExample(page, 'nb3sn_like')
+  await loadFixture(page, 'kappa')
   await analyse(page)
 
   const panel = page.locator('section.card', { hasText: '측정 오차 전파' })
@@ -375,7 +431,7 @@ test('a systematic Jc error moves lambda but not the gap', async ({ page }) => {
   // density is a ratio in which a common scale factor cancels, so a geometry
   // calibration error cannot move Delta(0) at all.
   test.setTimeout(180_000)
-  await loadExample(page, 'nb3sn_like')
+  await loadFixture(page, 'kappa')
   await analyse(page)
 
   const panel = page.locator('section.card', { hasText: '측정 오차 전파' })
@@ -416,7 +472,7 @@ test('the page is in Korean and the API still speaks only codes', async ({ page 
     }
   })
 
-  await loadExample(page, 'nbti_like')
+  await loadFixture(page, 'hc2')
   await analyse(page)
 
   await expect(page.getByRole('heading', { name: '피팅 결과' })).toBeVisible()

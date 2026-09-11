@@ -18,9 +18,12 @@ from app import resources
 def test_from_source_the_root_is_the_backend_directory():
     root = resources.root()
     assert root == pathlib.Path(__file__).resolve().parents[1]
-    # The two callers must actually find something there, or the constant is
-    # right and useless.
-    assert (root / "examples" / "manifest.json").is_file()
+    # The caller must actually find something there, or the constant is right
+    # and useless. Only `static/` now: the examples directory was the second
+    # thing this resolved and FR-028 withdrew it. `static/` is a build output,
+    # so its absence means the frontend has not been built, not that this is
+    # wrong -- hence the directory, not a file inside it.
+    assert not (root / "examples").exists()
     assert not resources.frozen()
 
 

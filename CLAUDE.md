@@ -61,9 +61,19 @@ synthetic `Jc(T)` generated from known parameters, fitted back. A wrong factor,
 sign, or unit anywhere in the chain shows up there and essentially nowhere else,
 because every one of those mistakes still produces a believable number.
 
-The shipped examples in `backend/examples/` are generated from stated parameters
-by `examples/generate.py`, so they are regression fixtures as well as demos.
-Their headers say what a correct analysis must recover.
+**Nothing is shipped as data.** FR-028 was withdrawn in Phase 12: a manufactured
+dataset distributed beside a measurement tool reads as a claim about real
+samples, so the built-in examples, the endpoints that served them, and the data
+directory inside the executable and the image are all gone. Do not add one back
+-- `test_the_api_serves_no_data_of_its_own` fails if an endpoint serving data
+reappears, and the reasoning is in spec section 9.
+
+The generated data itself stayed, under `backend/tests/data/`, written by
+`tests/data/generate.py` from stated parameters recorded in each file header.
+`test_whole_chain.py` is the only test that runs parsing, units, the inversion,
+the fit and the diagnostics together, and it can only do that because the
+answer is known: no measured film has a `lambda(0)` known independently to check
+a fit against. Name a fixture for the regime it creates, never for a material.
 
 ## Things that will surprise you
 
