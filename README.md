@@ -88,7 +88,13 @@ fixed Ginzburg-Landau parameter. It reports:
 - and, alongside every result, the assumptions it rests on and any that the data
   appear to violate.
 
-Two built-in examples run the whole thing without any data of your own.
+Two built-in examples run the whole thing without any data of your own. **They
+are synthetic**, computed by `backend/examples/generate.py` from parameters
+chosen to sit in the region NbTi and Nb3Sn films occupy, not measured on
+anything and not taken from a paper. Each file's header states the values it
+was built from, so a correct analysis has a known right answer and the examples
+serve as regression fixtures as well as demonstrations. No measured dataset is
+distributed with this repository.
 
 ### When this is the right tool
 

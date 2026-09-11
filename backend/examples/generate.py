@@ -132,7 +132,9 @@ def main() -> None:
             f"   ->  Delta(0) = {data['delta0'] / 1.602176634e-22:.4f} meV",
             f"#     kappa         = {truth['kappa']}",
             f"#     gap model     = {truth['model'].value}",
-            f"#     Jc scatter    = {truth['jc_scatter'] * 100:.0f} % (1 sigma, log-normal)",
+            # :g rather than :.0f -- the NbTi example's 0.2 % was being rounded to "0 %",
+            # which contradicted the prose eleven lines above it in the same file.
+            f"#     Jc scatter    = {truth['jc_scatter'] * 100:g} % (1 sigma, log-normal)",
             "#",
             "# A correct analysis recovers those values. That is what makes this",
             "# usable as a regression fixture as well as a demonstration.",
