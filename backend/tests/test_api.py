@@ -153,6 +153,79 @@ def test_export_csv_is_self_describing(client, example_request):
     assert len(data_rows) == len(analysis["lambda_table"]["temperature_K"])
 
 
+def _run_uncertainty(client, request, uncertainty: dict) -> dict:
+    """Start a propagation, wait for it, and return its result payload."""
+    body = dict(request)
+    body["uncertainty"] = uncertainty
+    job_id = client.post("/api/uncertainty", json=body).json()["job_id"]
+    deadline = time.time() + 120
+    while time.time() < deadline:
+        status = client.get(f"/api/jobs/{job_id}").json()
+        if status["state"] in ("SUCCEEDED", "FAILED"):
+            break
+        time.sleep(0.2)
+    assert status["state"] == "SUCCEEDED", status.get("error")
+    return status["result"]
+
+
+@pytest.mark.parametrize("endpoint", ["/api/export/csv", "/api/export/curve.csv"])
+def test_every_saved_file_can_reproduce_its_uncertainty(client, example_request, endpoint):
+    """FR-017. The seed was written and the stated input errors were not.
+
+    The same seed with a different "5 %" gives a different interval, so a file
+    that records one and not the other cannot explain its own numbers. Found by
+    an adversarial review. Both files, because either may be opened alone.
+
+    The propagation's warnings are asserted too. They were not being written at
+    all, and one of them says the interval may be too narrow -- so a warning is
+    attached here rather than hoping one fires, which would make the assertion
+    vacuous whenever it did not.
+    """
+    analysis = client.post("/api/analyze", json=example_request).json()
+    uncertainty = _run_uncertainty(client, example_request, {
+        "jc_error_percent": 5.0, "hc2_error_percent": 3.0,
+        "correlation_mode": "SYSTEMATIC", "n_samples": 100,
+        "confidence_percent": 95.0, "seed": 4242,
+    })
+    uncertainty["warnings"] = [*uncertainty["warnings"], {
+        "code": "MC_SAMPLES_DISCARDED", "severity": "WARNING",
+        "params": {"n_valid": 97, "n_requested": 100},
+    }]
+    analysis["uncertainty"] = uncertainty
+
+    text = client.post(endpoint, json=analysis).text
+    assert "seed 4242" in text
+    assert "95.0 % interval" in text
+    assert "input 1-sigma [%]    : Jc 5, Hc2 3, xi 0, kappa 0" in text
+    for warning in uncertainty["warnings"]:
+        assert warning["code"] in text
+    # And the settings the fit itself ran under.
+    assert "coherence length     : FROM_HC2" in text
+    assert "kappa (held fixed)" not in text      # only when one was held
+
+
+@pytest.mark.parametrize("endpoint", ["/api/export/csv", "/api/export/curve.csv"])
+def test_a_fixed_kappa_is_written_into_both_files(client, endpoint):
+    """The number that sets lambda(0) under FIXED_KAPPA was in neither file.
+
+    The results table has a kappa column from which it could be guessed; the
+    curve file had nothing. A guess is not a record.
+    """
+    text = (pathlib.Path(__file__).resolve().parent / "data"
+            / "strong_coupling_dirty_kappa.txt").read_text(encoding="utf-8")
+    values = client.post("/api/parse", json={"text": text}).json()["values"]
+    request = {
+        "dataset": {"temperature_K": [r[0] for r in values],
+                    "jc": [r[1] for r in values], "jc_unit": "A_PER_CM2"},
+        "settings": {"coherence_source": "FIXED_KAPPA", "kappa_fixed": 30.0,
+                     "gap_model": "DIRTY", "fit_route": "TWO_STEP"},
+    }
+    analysis = client.post("/api/analyze", json=request).json()
+    exported = client.post(endpoint, json=analysis).text
+    assert "coherence length     : FIXED_KAPPA" in exported
+    assert "kappa (held fixed)   : 30" in exported
+
+
 def test_export_csv_carries_the_fit_view_of_each_point(client, example_request):
     """The per-measurement table reports the fit at the measured points too.
 

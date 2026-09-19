@@ -211,8 +211,20 @@ def _write_conditions(buffer: io.StringIO, result: schemas.AnalyzeResponse) -> N
     def comment(line: str = "") -> None:
         buffer.write(f"# {line}\n" if line else "#\n")
 
+    settings = result.settings
+
     comment("Nodeless SC gap extraction")
     comment()
+    # FR-017. The settings that entered the result come first, before any
+    # number they produced. The coherence source was missing from both files
+    # until an adversarial review of the export prompted a check -- and with it
+    # the fixed kappa, one of the numbers that sets lambda(0).
+    comment(f"coherence length     : {settings.coherence_source.value}")
+    if settings.kappa_fixed is not None:
+        comment(f"kappa (held fixed)   : {settings.kappa_fixed:.10g}")
+    if settings.film_thickness_nm is not None:
+        comment(f"film thickness [nm]  : {settings.film_thickness_nm:.10g}"
+                "   (diagnostics only; does not enter the physics)")
     comment(f"gap model            : {fit.gap_model.value}")
     comment(f"extraction route     : {fit.fit_route.value}")
     comment(f"lambda(0) [nm]       : {_pm(fit.lambda0_nm)}")
@@ -232,16 +244,27 @@ def _write_conditions(buffer: io.StringIO, result: schemas.AnalyzeResponse) -> N
 
     if result.uncertainty is not None:
         unc = result.uncertainty
+        u = unc.settings
         comment()
         comment(f"Monte Carlo, {unc.n_valid}/{unc.n_requested} draws, seed "
-                f"{unc.settings.seed}, {unc.settings.correlation_mode.value}, "
-                f"{unc.settings.confidence_percent} % interval")
+                f"{u.seed}, {u.correlation_mode.value}, "
+                f"{u.confidence_percent} % interval")
+        # All four, including the zeros. The same seed with a different stated
+        # error gives a different interval, so without these the line above
+        # could not be reproduced (FR-017); and a zero written down is a
+        # statement, where a zero left out is a guess.
+        comment(f"input 1-sigma [%]    : Jc {u.jc_error_percent:g}, "
+                f"Hc2 {u.hc2_error_percent:g}, xi {u.xi_error_percent:g}, "
+                f"kappa {u.kappa_error_percent:g}")
         comment(f"lambda(0) [nm]       : {_interval(unc.lambda0_nm)}")
         comment(f"Delta(0) [meV]       : {_interval(unc.delta0_meV)}")
         comment(f"Tc [K]               : {_interval(unc.tc_K)}")
 
     comment()
-    for warning in diagnostics.warnings:
+    # The propagation's warnings as well as the fit's. They were left out, and
+    # one of them is the statement that the interval above may be too narrow.
+    propagation = result.uncertainty.warnings if result.uncertainty is not None else []
+    for warning in [*diagnostics.warnings, *propagation]:
         comment(f"{warning.severity.value}: {warning.code} {warning.params or ''}".rstrip())
     comment()
 

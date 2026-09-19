@@ -204,7 +204,24 @@ open, and each plot can be saved as an image.
 - **FR-016** The system MUST let the user choose the confidence level of the
   reported interval.
 - **FR-017** The system MUST report enough information for an uncertainty
-  computation to be reproduced exactly.
+  computation to be reproduced exactly. Every saved file MUST carry it too,
+  since a saved file is what survives into a notebook or a paper and the screen
+  does not: how the coherence length was established and the fixed
+  Ginzburg-Landau parameter if one was used, the gap model, the extraction
+  route, a critical temperature that was held fixed, and for a propagated
+  uncertainty every stated input uncertainty, the correlation mode, the number
+  of draws, the confidence level and the seed -- and every warning the
+  propagation raised, not only those the fit raised.
+
+  *Why the file and not only the screen.* An adversarial review found the
+  saved files recorded the seed and the draw count but not the stated input
+  uncertainties, so the same seed with a different "5 %" gave a different
+  interval that the file could not explain. Checking that finding turned up two
+  more omissions of the same kind: the method used for the coherence length --
+  and with it the fixed Ginzburg-Landau parameter, one of the numbers that sets
+  the penetration depth -- appeared in neither file, and the propagation's own
+  warnings, one of which says the interval may be too narrow, were not written
+  at all.
 - **FR-018** While a long-running uncertainty computation is in progress, the
   system MUST show that it is running and how far along it is, and MUST keep the
   page usable.
