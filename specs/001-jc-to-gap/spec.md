@@ -224,7 +224,17 @@ open, and each plot can be saved as an image.
   at all.
 - **FR-018** While a long-running uncertainty computation is in progress, the
   system MUST show that it is running and how far along it is, and MUST keep the
-  page usable.
+  page usable. Because the page stays usable, the data can change while the
+  computation runs, and its result MUST then be attached only to the analysis
+  it was started for -- never to whichever analysis is showing when it
+  arrives.
+
+  *Why this is stated.* An adversarial review suspected it and an end-to-end
+  test reproduced it: with the start request held until a second sample had
+  been analysed, the first sample's interval appeared beside the second
+  sample's fit -- a penetration depth of 120 nm with an interval centred on
+  250 nm -- and would have gone into the exported file. With two similar
+  samples nothing on the screen would have shown it.
 - **FR-029** The system MUST let the user state whether a quoted measurement
   uncertainty is a calibration error common to the whole dataset or scatter that
   varies from one temperature to the next, MUST default to the former, and MUST

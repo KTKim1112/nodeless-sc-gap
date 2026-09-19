@@ -4,7 +4,7 @@
  * Holds the state, calls the API, and lays the panels out in the order the work
  * happens: data in, check how it was read, choose settings, look at results.
  */
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   api,
   ApiError,
@@ -88,6 +88,15 @@ export default function App() {
    * touched since.
    */
   const [analysedRequest, setAnalysedRequest] = useState<AnalyzeRequest | null>(null)
+  /**
+   * The same, readable from a callback created on an earlier render.
+   *
+   * A propagation's result arrives through a callback captured when the run
+   * started, whose view of `analysedRequest` is as old as that. Comparing
+   * against this instead is what lets a late answer be recognised as late.
+   */
+  const currentRequest = useRef<AnalyzeRequest | null>(null)
+  useEffect(() => { currentRequest.current = analysedRequest }, [analysedRequest])
   const [busy, setBusy] = useState(false)
 
   // Parse whenever the text settles. Debounced, because this runs on every
@@ -229,8 +238,17 @@ export default function App() {
           <UncertaintyPanel
             request={analysedRequest}
             coherenceSource={settings.coherence_source}
-            onResult={(uncertainty: UncertaintyResult) =>
-              setResult((current) => (current ? { ...current, uncertainty } : current))}
+            onResult={(uncertainty: UncertaintyResult, origin: AnalyzeRequest) => {
+              // Only the analysis the propagation was started for may carry
+              // it. Without this check a late answer was attached to whatever
+              // was on screen when it arrived -- another sample's error bars,
+              // in the table and in the exported file, reproduced by an e2e
+              // test that holds the start request until a second analysis is
+              // showing. The panel guards against this too; this is the check
+              // that holds even if that one is ever lost.
+              if (origin !== currentRequest.current) return
+              setResult((current) => (current ? { ...current, uncertainty } : current))
+            }}
           />
           <DiagnosticsPanel result={result} />
           <Assumptions result={result} />

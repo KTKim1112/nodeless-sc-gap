@@ -480,6 +480,60 @@ test('uncertainty propagation runs in the background and reports intervals', asy
   await expect(summary).toContainText('seed')
 })
 
+test('a propagation started for one dataset never lands on another', async ({ page }) => {
+  // From an adversarial review. The run is a background job the page polls,
+  // and the panel goes away when the data change. An answer already on its
+  // way can still arrive, and it used to be attached to whatever result was on
+  // screen by then -- another sample's error bars, in the table and the CSV,
+  // with nothing to show they belonged elsewhere.
+  //
+  // The widest window is the start request itself: if the panel goes away
+  // while it is in flight, the reply used to start a polling timer that
+  // nothing could stop. So that reply is held here until the second analysis
+  // is on screen, then released, and the first job is left to finish.
+  test.setTimeout(180_000)
+  await loadFixture(page, 'hc2')
+  await analyse(page)
+
+  let release!: () => void
+  const held = new Promise<void>((resolve) => { release = resolve })
+  let firstJob = ''
+  await page.route('**/api/uncertainty', async (route) => {
+    await held
+    const response = await route.fetch()
+    firstJob = (await response.json()).job_id
+    await route.fulfill({ response })
+  })
+
+  const panel = page.locator('section.card', { hasText: '측정 오차 전파' })
+  await panel.getByLabel('Jc 오차 [%]').fill('5')
+  await panel.getByLabel('표본 수').fill('100')
+  await panel.getByRole('button', { name: '오차 전파 실행' }).click()
+
+  // A different sample, analysed while the first request is still in flight.
+  await page.locator('textarea.data-input')
+    .fill(readFileSync(join(FIXTURES, DATA.kappa), 'utf8'))
+  await page.getByLabel('코히런스 길이 ξ 결정 방식').selectOption('FIXED_KAPPA')
+  await page.getByLabel('κ = λ/ξ').fill('30')
+  await page.getByLabel('갭 모델').selectOption('DIRTY')
+  await analyse(page)
+  expect(await fitNumber(page, 'λ(0)')).toBeCloseTo(120, -1)
+
+  // Let the first request complete, and the job behind it finish.
+  release()
+  await expect.poll(() => firstJob, { timeout: 30_000 }).not.toBe('')
+  await expect.poll(async () =>
+    (await (await page.request.get(`/api/jobs/${firstJob}`)).json()).state,
+  { timeout: 150_000 }).toBe('SUCCEEDED')
+  // Longer than the one-second polling interval, so an orphaned timer would
+  // have fetched the finished job and attached it by now.
+  await page.waitForTimeout(3000)
+
+  const summary = page.locator('section.card', { hasText: '피팅 결과' })
+  await expect(summary).not.toContainText('측정 오차 전파는')
+  expect(await fitNumber(page, 'λ(0)')).toBeCloseTo(120, -1)
+})
+
 test('a systematic Jc error moves lambda but not the gap', async ({ page }) => {
   // Research R8.3, visible to the user: under a fixed kappa the superfluid
   // density is a ratio in which a common scale factor cancels, so a geometry

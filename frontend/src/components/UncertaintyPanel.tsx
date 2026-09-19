@@ -35,7 +35,13 @@ export const DEFAULT_UNCERTAINTY: UncertaintySettings = {
 interface Props {
   request: AnalyzeRequest | null
   coherenceSource: CoherenceSource
-  onResult: (result: UncertaintyResult) => void
+  /**
+   * `origin` is the request the propagation was started for. The receiver
+   * compares it with the analysis now on screen and discards a mismatch: an
+   * answer can arrive after the data have changed, and without this it was
+   * attached to whichever sample was showing by then.
+   */
+  onResult: (result: UncertaintyResult, origin: AnalyzeRequest) => void
 }
 
 type Phase = 'idle' | 'running' | 'failed'
@@ -46,9 +52,38 @@ export function UncertaintyPanel({ request, coherenceSource, onResult }: Props) 
   const [progress, setProgress] = useState(0)
   const [problem, setProblem] = useState<string | null>(null)
   const polling = useRef<number | null>(null)
+  /**
+   * False once this panel has gone away. Clearing the timer on the way out is
+   * not enough on its own: an `await` that was in flight then resumes into a
+   * component that no longer exists, and the start request's reply used to
+   * create a fresh timer that nothing was left to clear -- which then polled
+   * for minutes and delivered its result to the next analysis.
+   */
+  const alive = useRef(true)
 
-  // Stop polling if the component goes away mid-run.
-  useEffect(() => () => { if (polling.current) window.clearInterval(polling.current) }, [])
+  const stopPolling = () => {
+    if (polling.current !== null) window.clearInterval(polling.current)
+    polling.current = null
+  }
+
+  useEffect(() => {
+    alive.current = true
+    return () => {
+      alive.current = false
+      stopPolling()
+    }
+  }, [])
+
+  // Re-running the analysis on unchanged inputs keeps this panel mounted but
+  // replaces the analysis a running propagation was for. Its answer would be
+  // discarded on arrival (see `onResult`), so stop waiting for it rather than
+  // show a progress bar that ends in nothing.
+  useEffect(() => {
+    if (polling.current === null) return
+    stopPolling()
+    setPhase('idle')
+    setProgress(0)
+  }, [request])
 
   const set = (patch: Partial<UncertaintySettings>) => setSettings({ ...settings, ...patch })
 
@@ -61,6 +96,10 @@ export function UncertaintyPanel({ request, coherenceSource, onResult }: Props) 
 
   async function run() {
     if (!request) return
+    // Captured now, because `request` may be a different analysis by the time
+    // the answer comes back; this is what the answer belongs to.
+    const origin = request
+    stopPolling()
     setPhase('running')
     setProgress(0)
     setProblem(null)
@@ -78,30 +117,37 @@ export function UncertaintyPanel({ request, coherenceSource, onResult }: Props) 
         confidence_percent: settings.confidence_percent,
         seed: settings.seed,
       }
-      ;({ job_id: jobId } = await api.startUncertainty({ ...request, uncertainty: applicable }))
+      ;({ job_id: jobId } = await api.startUncertainty({ ...origin, uncertainty: applicable }))
     } catch (e) {
+      if (!alive.current) return
       setPhase('failed')
       setProblem(e instanceof ApiError ? errorMessage(e.code, e.params) : String(e))
       return
     }
+    // The panel may have gone while the job was being accepted. Starting a
+    // timer now is what used to leave one running with nobody to stop it.
+    if (!alive.current) return
 
     polling.current = window.setInterval(async () => {
       try {
         const job = await api.job(jobId)
+        // And it may have gone while this poll was in flight.
+        if (!alive.current) { stopPolling(); return }
         setProgress(job.progress)
         if (job.state === 'SUCCEEDED' && job.result) {
-          window.clearInterval(polling.current!)
+          stopPolling()
           setPhase('idle')
-          onResult(job.result)
+          onResult(job.result, origin)
         } else if (job.state === 'FAILED') {
-          window.clearInterval(polling.current!)
+          stopPolling()
           setPhase('failed')
           setProblem(job.error
             ? errorMessage(job.error.code, job.error.params as Record<string, unknown>)
             : '계산이 실패했습니다.')
         }
       } catch (e) {
-        window.clearInterval(polling.current!)
+        stopPolling()
+        if (!alive.current) return
         setPhase('failed')
         setProblem(e instanceof ApiError ? errorMessage(e.code, e.params) : String(e))
       }
