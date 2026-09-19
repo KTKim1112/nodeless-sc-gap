@@ -188,7 +188,7 @@ section 9 says why for each.
 
 ---
 
-## Two things worth knowing before trusting a number
+## Three things worth knowing before trusting a number
 
 **A wrong `Jc` unit does not fail.** A/cm² and A/m² are both physically
 possible, so nothing can detect the mistake. It moves `lambda(0)` by a factor of
@@ -199,6 +199,16 @@ in `rho_s`, so separating them needs scatter on `Jc` below about half a per
 cent. Above roughly 2 % the tool will say it cannot choose -- and the two models
 give gaps about 20 % apart, so which one was used has to be reported.
 
+**Data that stop well below `Tc` do not determine the coupling ratio.** Below
+about a third of `Tc` the superfluid density is flat against one, so a
+measurement taken only in a liquid-helium bath carries almost no information
+about how the curve bends -- and `2 Delta(0) / kB Tc` depends on exactly that.
+The fit still returns a number; the tool now declines to name a coupling regime
+from it and says why. Fixing `Tc` to its measured value does not help, measured
+at a factor-of-three error either way. `lambda(0)` is unaffected, and with `Tc`
+free so is `Delta(0)` whenever its own error bar is small. Measure to at least
+`0.4 Tc`.
+
 ---
 
 ## Layout
@@ -207,7 +217,7 @@ give gaps about 20 % apart, so which one was used has to be reported.
     specs/001-jc-to-gap/              what is being built and why, and the physics
     backend/app/core/                 the physics. No web framework, ever
     backend/app/                      the HTTP layer over it
-    backend/tests/                    191 tests, and the fixtures they run on
+    backend/tests/                    202 tests, and the fixtures they run on
     frontend/src/                     the page. Its Korean lives here
     frontend/e2e/                     the acceptance walkthrough, executed
     docs/                             how this was built, for the maintainer
@@ -221,8 +231,8 @@ interface, without any of the rest.
 
 ## Checking it
 
-    cd backend && .\.venv\Scripts\python.exe -m pytest -v      # 191 tests
-    cd frontend && npm run test:e2e                             # 25 tests, starts both servers
+    cd backend && .\.venv\Scripts\python.exe -m pytest -v      # 202 tests
+    cd frontend && npm run test:e2e                             # 28 tests, starts both servers
     cd frontend && npm run shots                                # screenshots for review by eye
 
 The test that matters most generates `Jc(T)` from known parameters and checks

@@ -24,7 +24,7 @@ Written so that someone starting from the same place can follow it.
 - [02. Prerequisites — what to install and why](#02-prerequisites--what-to-install-and-why)
 - [03. Orca and Claude Code](#03-orca-and-claude-code--which-is-which)
 - [04. SDD — spec-driven development](#04-sdd--spec-driven-development)
-- [05. Phase 0 to 11 — what actually happened](#05-phase-0-to-11--what-actually-happened)
+- [05. Phase 0 to 13 — what actually happened](#05-phase-0-to-13--what-actually-happened)
 - [06. What one turn looks like](#06-what-one-turn-looks-like)
 - [07. The result](#07-the-result)
 - [08. Doing it again — a checklist](#08-doing-it-again--a-checklist)
@@ -539,7 +539,7 @@ where it went wrong.
 
 ---
 
-## 05. Phase 0 to 11 — what actually happened
+## 05. Phase 0 to 13 — what actually happened
 
 What follows is the record. Ten commits correspond to the stages. The **what
 actually happened** paragraphs are the most valuable part of this manual: the
@@ -1092,6 +1092,70 @@ The placeholder in the input box does what it can.
 
 ---
 
+### Phase 13 — three findings from an adversarial review
+
+A second model (Codex) was asked to review the whole program adversarially:
+does it realise its purpose and specification? Three findings.
+
+**Each was checked against the code, and reproduced where it could be, before
+anything was changed.** All three were right in substance and wrong in one
+particular, and each time the particular changed the fix.
+
+**One: bound-limited fits reported like any other -- right, for the wrong
+reason.** The review said they carry ordinary error bars. Measured, 247 of 247
+had a relative uncertainty on the ratio of at least 50 %, median 19 000 %. The
+fit was shouting; nothing put it into words, and the regime label ignored it.
+
+The rule was derived from the regime bands instead -- no regime is named when
+the uncertainty exceeds half the narrowest band -- and then **a test found its
+blind spot**: with `Tc` fixed and data to `0.2 Tc`, the error bar came out small
+and the ratio 19 % wrong. A reach condition, data to at least `0.4 Tc`, closed
+it.
+
+> **Nearly advised: "fix `Tc`"**
+>
+> The obvious remedy. Measured, **with the true `Tc` supplied the ratio was
+> still wrong by a factor of three.** What is missing is how `rho_s(T)` bends,
+> which only shows above a third of `Tc`; telling the fit where the curve ends
+> does not supply its shape. The warning now says fixing `Tc` does not help.
+
+> **A screenshot corrected the wording once more**
+>
+> The first wording was "`Delta(0)` is not determined", directly under a table
+> row reading **`Delta(0) = 1.42 +/- 0.12 meV` -- true value 1.40, correct.**
+> With small scatter the coldest data can fix `Delta(0)`; what they cannot fix
+> is `Tc`, and so the ratio. Measured, `Delta(0)`'s own error bar stays honest
+> when `Tc` is free. The warning is `COUPLING_RATIO_NOT_DETERMINED` now, and says
+> how to read `Delta(0)` in each case.
+
+**Two: exports cannot reproduce their uncertainty -- right, and incomplete.**
+The stated input errors were missing, as reported. Checking turned up more:
+**how the coherence length was established, and a fixed kappa, were in neither
+file**, and **the propagation's own warnings were never written at all.**
+
+**Three: a late propagation lands on another sample -- right, and worse on
+screen than described.** Reproduced first, by holding the start request while a
+second sample was analysed: **a 120 nm fit with an interval centred on 250 nm
+beside it**, headed for the CSV. Two guards went in, and each was checked
+holding the line on its own.
+
+> **Check that a new test fails on the old code**
+>
+> A test that passes before the fix is not testing the fix. All three were
+> reverted and watched failing before being fixed -- and finding one had first
+> produced two tests that passed while checking nothing.
+
+**What the reviewer could not do.** Codex could not start Python in its own
+environment, so it read the code and ran none of it. Every mechanism above was
+established here by running it. A second pair of eyes says where to look;
+measuring says what is true.
+
+- **Gate** — each finding fixed with a test that fails on the code before the
+  fix, or rejected with a reason. **Met**, all three fixed. 202 backend plus 28
+  end-to-end tests.
+
+---
+
 ## 06. What one turn looks like
 
 ### 6.1 Division of labour
@@ -1164,7 +1228,7 @@ order are all fixed.
 | | |
 | --- | --- |
 | Commits | 17 |
-| Backend tests | 191 |
+| Backend tests | 202 |
 | Browser tests | 25 |
 | API endpoints | 10 |
 | Requirements | 30, each mapped to a task |
@@ -1211,7 +1275,7 @@ nodeless-sc-gap/
 │   │   ├── schemas.py        the wire format. Units convert only here
 │   │   ├── resources.py      where its own files are: installed or packaged
 │   │   └── desktop.py        entry point for the standalone build
-│   ├── tests/                15 files, 191 tests
+│   ├── tests/                15 files, 202 tests
 │   └── tests/data/           two synthetic fixtures and their generator
 │
 ├── packaging/                building the distributable .exe
@@ -1419,7 +1483,7 @@ separate clean from dirty**. That contrast is why two examples ship.
 ### 7.6 Verifying it
 
 ```powershell
-# 191 backend tests -- whether the physics is right
+# 202 backend tests -- whether the physics is right
 cd backend
 .\.venv\Scripts\python.exe -m pytest -q
 
@@ -1654,8 +1718,8 @@ claude --resume                          # continue an earlier one
 .\dev.ps1                                # both servers, and open the page
 
 # ---- verifying ----
-cd backend; .\.venv\Scripts\python.exe -m pytest -q     # 191 tests
-cd frontend; npm run test:e2e                           # 25 tests
+cd backend; .\.venv\Scripts\python.exe -m pytest -q     # 202 tests
+cd frontend; npm run test:e2e                           # 28 tests
 cd frontend; npm run shots                              # screenshots
 
 # ---- building something to give away ----

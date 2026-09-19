@@ -530,6 +530,55 @@ itself. Then it read `app.routes`, which holds an included router rather than
 its paths, so `/api/parse` was not in it either. It reads the generated OpenAPI
 schema now, which is the list that is actually published.
 
+## Phase 13 — Three findings from an adversarial review
+
+A whole-program review by a second model, asked whether the program realises
+its purpose and specification. Three findings. Each was checked against the
+code before anything was changed; all three were right in substance and wrong
+in some particular, and in each case the particular mattered to the fix.
+
+| Id | Task | Depends on |
+| --- | --- | --- |
+| T1301 | [done] evaluate each finding against the code; reproduce what can be reproduced before changing anything | — |
+| T1302 | [done] measure over 1200 fits which quantity predicts an undetermined coupling ratio; research R10 | T1301 |
+| T1303 | [done] spec FR-023a; `CouplingRegime.UNDETERMINED`; `fitting.parameters_at_limit`; `COUPLING_RATIO_NOT_DETERMINED`; fit summary stops comparing an undetermined ratio with BCS | T1302 |
+| T1304 | [done] spec FR-017 extended; both exports carry the coherence source, a fixed kappa, all four stated input errors, and the propagation's warnings | T1301 |
+| T1305 | [done] e2e test holding the start request reproduces the uncertainty race; spec FR-018 extended; two guards, each verified alone | T1301 |
+
+**Gate:** each finding either fixed with a test that fails on the code before
+the fix, or rejected with a reason. **Met**, all three fixed. 202 backend tests,
+28 e2e.
+
+*Finding 2, coupling regimes from undetermined ratios -- right, but not for the
+stated reason.* The review said a fit resting on a bound is reported with
+ordinary error bars. Measured, the error bar was never ordinary: 247 of 247
+bound-limited fits had a relative uncertainty on the ratio of at least 50 %,
+median 19 000 %. Nothing was saying it in words, and the regime label ignored
+it. The rule is derived from the regime bands -- no regime when sigma exceeds
+half the narrowest band -- plus a reach condition that a failing test forced
+in: with `Tc` fixed and data to `0.2 Tc` the error bar came out small and the
+ratio 19 % wrong. The obvious remedy, fixing `Tc`, was measured to fail and the
+warning says so. A screenshot then showed the first wording ("the gap is not
+determined") beside a correct `Delta(0)`; measured, `Delta(0)`'s own error bar
+stays honest when `Tc` is free, so the warning names the ratio and says which
+case applies.
+
+*Finding 3, exports that cannot reproduce their uncertainty -- right, and
+incomplete.* The stated input errors were missing, as reported. So were the
+coherence source and the fixed kappa, in both files, and so were the
+propagation's own warnings, which were never written at all.
+
+*Finding 1, a late propagation attached to a different analysis -- right, and
+worse on the screen than in the description.* Reproduced before fixing: a
+120 nm fit with an interval centred on 250 nm beside it. Rated high by the
+review; the probability is low, since the start request has to be in flight
+when the data change, but the failure is silent and exported, which is why it
+was fixed with two guards rather than one.
+
+*What the review could not do.* It read the code and ran none of it -- its own
+environment could not start Python. Every mechanism above was established
+here by running it.
+
 ## Requirement coverage
 
 Every functional requirement maps to at least one task.
@@ -554,4 +603,5 @@ Every functional requirement maps to at least one task.
 | FR-014 | T109, T308 | FR-028 | *withdrawn* by T1201 |
 | | | FR-029 | T111, T120b, T501 |
 | | | FR-029a | T1201, T1206, T1209 |
+| | | FR-023a | T1302, T1303 |
 | | | FR-030 | T109, T111, T503 |
