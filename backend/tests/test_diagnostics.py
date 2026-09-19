@@ -117,6 +117,180 @@ def test_absent_low_temperature_coverage_warns_more_strongly():
     assert "LOW_T_COVERAGE_WEAK" not in _codes(result.diagnostics)
 
 
+# --- whether the coupling ratio is determined at all (FR-023a) ---------------
+#
+# The other end of the temperature range from the tests above. Research R10
+# measures the failure: data stopping below about a third of Tc still produce a
+# gap, typically wrong by a factor of three, and the regime was named from it.
+
+def _low_temperature_only(frac: float, *, tc_fixed: float | None = None,
+                          scatter: float = 0.01, seed: int = 1):
+    """Jc(T) measured only up to `frac * Tc`, as from a liquid-helium dip.
+
+    With scatter, because that is the realistic case and because noiseless
+    data hide the failure: with no scatter the residual variance is zero, the
+    standard errors come out zero, and every fit looks perfectly determined.
+    """
+    t = np.linspace(0.05 * TRUE_TC, frac * TRUE_TC, 20)
+    data = synthesise(GapModel.CLEAN, n_points=20, t_min=t[0], t_max=t[-1])
+    jc = data["jc"] * np.random.default_rng(seed).lognormal(0.0, scatter, t.size)
+    dataset = build_dataset(data["temperature_K"], jc, xi=data["xi"])
+    return pipeline.run_analysis(dataset, AnalysisSettings(
+        coherence_source=CoherenceSource.EXPLICIT_XI, tc_fixed_K=tc_fixed))
+
+
+def test_data_that_stop_low_do_not_determine_the_coupling_ratio():
+    result = _low_temperature_only(0.2)
+    d = result.diagnostics
+    assert "COUPLING_RATIO_NOT_DETERMINED" in _codes(d)
+    # FR-023a: no regime is named. Before this, it was named from the central
+    # value alone and a BCS superconductor came out strongly coupled.
+    assert d.coupling_regime is CouplingRegime.UNDETERMINED
+    # And the fit is not refused: lambda(0) is set by the coldest points and
+    # stays right, which is worth keeping.
+    assert result.fit.lambda0.value == pytest.approx(TRUE_LAMBDA0, rel=0.01)
+
+
+def test_fixing_tc_does_not_rescue_the_gap():
+    """The obvious remedy, pinned as not working so that no one advises it.
+
+    Research R10: with Tc held at the true value, data to 0.2 Tc still give a
+    coupling ratio wrong by about a factor of three. What is missing is the
+    curvature of rho_s(T), which lives above a third of Tc; knowing where the
+    curve ends does not supply its shape.
+    """
+    result = _low_temperature_only(0.2, tc_fixed=TRUE_TC)
+    assert result.fit.tc.fixed
+    assert "COUPLING_RATIO_NOT_DETERMINED" in _codes(result.diagnostics)
+    assert result.diagnostics.coupling_regime is CouplingRegime.UNDETERMINED
+
+
+def test_data_that_reach_near_tc_determine_it():
+    result = _low_temperature_only(0.9)
+    assert "COUPLING_RATIO_NOT_DETERMINED" not in _codes(result.diagnostics)
+    assert result.diagnostics.coupling_regime is CouplingRegime.WEAK_COUPLING_BCS
+
+
+def test_the_ratio_threshold_is_where_the_bands_say(dataset_xi, settings_xi):
+    """Checked just inside and just outside, as every threshold here is.
+
+    The limit is half the width of the narrowest regime band. The fit itself is
+    good; only the reported uncertainty is changed, so what is exercised is the
+    rule and nothing else.
+    """
+    import dataclasses
+
+    from app.core.diagnostics import RATIO_SIGMA_LIMIT
+    from app.core.fitting import fit_route_a
+    from app.core.types import FittedParameter
+
+    table = ls.build_lambda_table(dataset_xi, settings_xi)
+    fit = fit_route_a(table, settings_xi)
+
+    def with_sigma(sigma):
+        return dataclasses.replace(fit, coupling_ratio=FittedParameter(
+            value=fit.coupling_ratio.value, stderr=sigma))
+
+    inside = build_report(table, with_sigma(RATIO_SIGMA_LIMIT * 0.99), settings_xi)
+    outside = build_report(table, with_sigma(RATIO_SIGMA_LIMIT * 1.01), settings_xi)
+    missing = build_report(table, with_sigma(None), settings_xi)
+
+    assert "COUPLING_RATIO_NOT_DETERMINED" not in _codes(inside)
+    assert inside.coupling_regime is CouplingRegime.WEAK_COUPLING_BCS
+    for report in (outside, missing):
+        assert "COUPLING_RATIO_NOT_DETERMINED" in _codes(report)
+        assert report.coupling_regime is CouplingRegime.UNDETERMINED
+
+
+def test_the_reach_threshold_catches_what_the_error_bar_misses(dataset_xi, settings_xi):
+    """Just inside and just outside the reach limit, with a tiny error bar.
+
+    This is the blind spot the reach rule exists for: the linearised
+    uncertainty can come out small while the data stop far below Tc, and then
+    only how far the data reach can say that the ratio is not determined. The
+    error bar is held small throughout so that reach is the only thing varied.
+    """
+    import dataclasses
+
+    from app.core.diagnostics import RATIO_REACH_MIN
+    from app.core.fitting import fit_route_a
+    from app.core.types import FittedParameter
+
+    table = ls.build_lambda_table(dataset_xi, settings_xi)
+    fit = fit_route_a(table, settings_xi)
+    t_max = float(np.max(table.temperature_K))
+
+    def reaching(reach):
+        tc = t_max / reach
+        return dataclasses.replace(
+            fit,
+            tc=FittedParameter(value=tc, stderr=None, fixed=True),
+            delta0=FittedParameter(value=1.764 * KB * tc, stderr=1e-25),
+            coupling_ratio=FittedParameter(value=3.528, stderr=0.01))
+
+    inside = build_report(table, reaching(RATIO_REACH_MIN * 1.01), settings_xi)
+    outside = build_report(table, reaching(RATIO_REACH_MIN * 0.99), settings_xi)
+
+    assert "COUPLING_RATIO_NOT_DETERMINED" not in _codes(inside)
+    assert "COUPLING_RATIO_NOT_DETERMINED" in _codes(outside)
+    warning = next(w for w in outside.warnings if w.code == "COUPLING_RATIO_NOT_DETERMINED")
+    assert warning.params["too_short"] is True
+    assert warning.params["too_uncertain"] is False
+    assert warning.params["at_limit"] == []
+
+
+def test_a_parameter_on_a_bound_is_named(dataset_xi, settings_xi):
+    """A value resting on a limit of the fit is the bound's, not the data's.
+
+    The warning names which parameter, because the remedy differs: Tc on its
+    ceiling says the data stop far below Tc, alpha on its ceiling says the
+    fitter found no gap it could distinguish from an arbitrarily large one.
+    """
+    import dataclasses
+
+    from app.core.fitting import _ALPHA_BOUNDS, _TC_UPPER_FACTOR, parameters_at_limit
+    from app.core.fitting import fit_route_a
+    from app.core.types import FittedParameter
+
+    table = ls.build_lambda_table(dataset_xi, settings_xi)
+    fit = fit_route_a(table, settings_xi)
+    t_max = float(np.max(table.temperature_K))
+    assert parameters_at_limit(fit, t_max) == []
+
+    capped_tc = _TC_UPPER_FACTOR * t_max
+    on_tc = dataclasses.replace(
+        fit,
+        tc=FittedParameter(value=capped_tc, stderr=1.0),
+        delta0=FittedParameter(value=1.764 * KB * capped_tc, stderr=1e-23))
+    assert parameters_at_limit(on_tc, t_max) == ["tc"]
+
+    on_alpha = dataclasses.replace(
+        fit, delta0=FittedParameter(value=_ALPHA_BOUNDS[1] * KB * fit.tc.value,
+                                    stderr=1e-23))
+    assert parameters_at_limit(on_alpha, t_max) == ["alpha"]
+
+    report = build_report(table, on_alpha, settings_xi)
+    warning = next(w for w in report.warnings if w.code == "COUPLING_RATIO_NOT_DETERMINED")
+    assert warning.params["at_limit"] == ["alpha"]
+
+
+def test_a_fixed_tc_is_never_reported_as_resting_on_a_bound(dataset_xi):
+    """Held fixed, Tc is the user's number and was never searched for."""
+    import dataclasses
+
+    from app.core.fitting import _TC_UPPER_FACTOR, fit_route_a, parameters_at_limit
+    from app.core.types import FittedParameter
+
+    settings = AnalysisSettings(coherence_source=CoherenceSource.EXPLICIT_XI,
+                                tc_fixed_K=TRUE_TC)
+    table = ls.build_lambda_table(dataset_xi, settings)
+    fit = fit_route_a(table, settings)
+    t_max = float(np.max(table.temperature_K))
+    coincident = dataclasses.replace(fit, tc=FittedParameter(
+        value=_TC_UPPER_FACTOR * t_max, stderr=None, fixed=True))
+    assert "tc" not in parameters_at_limit(coincident, t_max)
+
+
 # --- thin-film regime --------------------------------------------------------
 
 def test_no_thin_film_warning_without_a_thickness():

@@ -97,6 +97,52 @@ const WARNINGS: Record<string, (p: Params) => string> = {
     `kappa의 최솟값이 ${num(p.kappa_min, 2)}로 ${num(p.threshold ?? 5, 0)}보다 작습니다` +
     (p.temperature_K ? ` (${num(p.temperature_K, 2)} K).` : '.') +
     ' 사용한 식은 kappa가 충분히 클 때의 Hc1 근사에 기대고 있어, 이 영역에서는 정확도가 떨어집니다.',
+  COUPLING_RATIO_NOT_DETERMINED: (p) => {
+    // FR-023a. Every reason that holds is named, because each calls for a
+    // different reading: a short reach says measure nearer Tc, a parameter on
+    // a bound says the value is the fit's limit and not the sample's.
+    const reasons: string[] = []
+    if (p.too_short) {
+      reasons.push(
+        `측정이 Tc의 ${num(p.reach, 2)}배(${num(p.t_max_K, 2)} K)까지만 닿아 ` +
+        `기준인 ${num(p.reach_min, 2)}배에 못 미칩니다`)
+    }
+    if (p.too_uncertain) {
+      reasons.push(p.coupling_ratio_stderr == null
+        ? '결합비 2Δ(0)/k_BTc의 불확도를 계산할 수 없었습니다'
+        : `결합비 2Δ(0)/k_BTc의 불확도가 ±${num(p.coupling_ratio_stderr, 2)}로, ` +
+          `가장 좁은 결합 영역의 반폭 ${num(p.sigma_limit, 2)}보다 큽니다`)
+    }
+    const names: Record<string, string> = { alpha: 'Δ(0)/k_BTc', tc: 'Tc', lambda0: 'λ(0)' }
+    const atLimit = (p.at_limit as string[] | undefined) ?? []
+    if (atLimit.length > 0) {
+      reasons.push(
+        `${atLimit.map((k) => names[k] ?? k).join(', ')} 값이 피팅 허용 범위의 끝에 ` +
+        '걸렸습니다 — 데이터가 아니라 경계가 정한 값입니다')
+    }
+    // What this says about Delta(0) itself depends on whether Tc was free, and
+    // research R10 measured both: free, Delta(0) is usually wrong too but its
+    // own error bar stays honest; fixed, Delta(0) and the ratio are one
+    // quantity and the error bar can understate the truth several times over.
+    const delta = p.tc_fixed
+      ? 'Tc를 고정했으므로 결합비와 Δ(0)는 사실상 같은 양이고, Δ(0)도 정해지지 ' +
+        '않습니다. 이 경우 표의 Δ(0) 오차 막대는 실제 오차를 몇 배까지 작게 ' +
+        '말할 수 있으니 믿지 마십시오. '
+      : 'Δ(0) 자체는 대개 함께 틀리지만, 이런 데이터에서도 표의 Δ(0) 오차 막대는 ' +
+        '정직했습니다 — 막대가 10 % 미만으로 나오면 그 Δ(0)는 맞았습니다. '
+    return (
+      '이 데이터로는 결합비 2Δ(0)/k_BTc가 정해지지 않습니다. ' +
+      reasons.join('. ') + '. ' +
+      '그래서 결합 영역을 판정하지 않았습니다. ' +
+      delta +
+      'λ(0)는 가장 낮은 온도의 측정점들이 정하므로 영향받지 않습니다. ' +
+      '결합비를 정하려면 Tc의 0.4배 이상, 가능하면 그보다 가까이까지 측정해야 합니다. ' +
+      (p.tc_fixed
+        ? 'Tc를 고정해서는 해결되지 않습니다'
+        : 'Tc를 고정해도 해결되지 않습니다') +
+      ' — 빠진 것은 ρs(T) 곡선의 모양이지, 곡선이 끝나는 온도가 아닙니다.'
+    )
+  },
   LOW_T_COVERAGE_WEAK: (p) =>
     `가장 낮은 측정 온도가 Tc의 ${num(p.t_min_over_tc, 2)}배입니다. ` +
     '갭은 저온의 지수적 거동에서 결정되므로, 이 범위에서는 Δ(0)의 신뢰도가 다소 낮습니다.',
@@ -157,6 +203,7 @@ export const LABELS = {
     WEAK_COUPLING_BCS: 'BCS 약결합',
     MODERATELY_STRONG: '중간 강결합',
     STRONG_COUPLING: '강결합',
+    UNDETERMINED: '판정 불가 — 결합비가 정해지지 않음',
   },
   severity: { INFO: '참고', WARNING: '주의', ERROR: '오류' },
 } as const

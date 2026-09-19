@@ -71,6 +71,10 @@ class CouplingRegime(str, Enum):
     WEAK_COUPLING_BCS = "WEAK_COUPLING_BCS"
     MODERATELY_STRONG = "MODERATELY_STRONG"
     STRONG_COUPLING = "STRONG_COUPLING"
+    #: The data do not determine the coupling ratio well enough to place it in any
+    #: of the above (FR-023a, research R10). Checked before the others: without
+    #: it a ratio of 12 +/- 2300 was labelled strong coupling.
+    UNDETERMINED = "UNDETERMINED"
 
 
 class JobState(str, Enum):

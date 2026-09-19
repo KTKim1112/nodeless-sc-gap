@@ -43,6 +43,17 @@ async function loadFixture(page: Page, which: keyof typeof DATA) {
   }
 }
 
+/** The assumptions panel, found by its heading rather than by its text.
+ *
+ * By text it matched two cards the moment the fit summary started pointing
+ * the reader to this panel by name (FR-023a). The same trap as the charts
+ * card, whose title also occurs in other cards' prose.
+ */
+const assumptionsPanel = (page: Page) =>
+  page.locator('section.card').filter({
+    has: page.getByRole('heading', { name: '가정과 주의사항', exact: true }),
+  })
+
 async function analyse(page: Page) {
   await page.getByRole('button', { name: '분석 실행' }).click()
   await expect(heading(page, '피팅 결과')).toBeVisible()
@@ -153,16 +164,59 @@ test('the two extraction routes agree', async ({ page }) => {
 test('a decisive model comparison is reported when the data support one', async ({ page }) => {
   await loadFixture(page, 'hc2')   // 0.2 % scatter: separable
   await analyse(page)
-  const assumptions = page.locator('section.card', { hasText: '가정과 주의사항' })
+  const assumptions = assumptionsPanel(page)
   await expect(assumptions).not.toContainText('판정할 수 없습니다')
 })
 
 test('and refused when they do not', async ({ page }) => {
   await loadFixture(page, 'kappa')  // 3 % scatter: not separable
   await analyse(page)
-  const assumptions = page.locator('section.card', { hasText: '가정과 주의사항' })
+  const assumptions = assumptionsPanel(page)
   await expect(assumptions).toContainText('판정할 수 없습니다')
   await expect(assumptions).toContainText('ΔAIC')
+})
+
+// --- FR-023a: data that do not determine the coupling ratio ------------------
+
+test('data from a helium dip alone do not get a coupling regime', async ({ page }) => {
+  // The hc2 fixture cut at 2.8 K, about 0.3 Tc: the dataset a 4.2 K bath and
+  // a pump would give. Through the API this returns a ratio of 3.97 against a
+  // true 3.53, which used to be labelled moderately strong coupling.
+  const all = readFileSync(join(FIXTURES, DATA.hc2), 'utf8').split('\n')
+  const cold = all.filter((line) => {
+    if (line.trimStart().startsWith('#') || !line.trim()) return true
+    return Number(line.trim().split(/\s+/)[0]) <= 2.8
+  })
+  await page.goto('/')
+  await page.locator('textarea.data-input').fill(cold.join('\n'))
+  await expect(heading(page, '읽은 결과 확인')).toBeVisible()
+  await analyse(page)
+
+  // No regime is named, and the badge says why rather than offering a fifth
+  // answer.
+  const summary = page.locator('section.card', { hasText: '피팅 결과' })
+  await expect(summary.locator('.badge.regime-UNDETERMINED')).toContainText('판정 불가')
+  for (const regime of ['약결합', '강결합']) {
+    await expect(summary.locator('.badges .badge').first()).not.toContainText(regime)
+  }
+  // Nor is it named by the back door: a percentage of the BCS value, to a
+  // tenth of a per cent, is a regime judgement in all but name.
+  await expect(summary).not.toContainText('%입니다')
+  await expect(summary).toContainText('BCS 값과 비교하지 않습니다')
+
+  // The assumptions panel says so in words, names every reason, and does not
+  // send the user off to fix Tc, which research R10 measured as no remedy.
+  const assumptions = assumptionsPanel(page)
+  await expect(assumptions).toContainText('결합비 2Δ(0)/k_BTc가 정해지지 않습니다')
+  await expect(assumptions).toContainText('0.4배')
+  await expect(assumptions).toContainText('Tc를 고정해도 해결되지 않습니다')
+  // Tc was free here, so Delta(0) is not condemned wholesale: research R10
+  // measured its own error bar as honest in this mode, and the fixture's
+  // Delta(0) comes out right.
+  await expect(assumptions).toContainText('Δ(0) 오차 막대는 정직했습니다')
+
+  // lambda(0) is still reported, and still right: the coldest points set it.
+  expect(await fitNumber(page, 'λ(0)')).toBeCloseTo(250, 0)
 })
 
 // --- AS-7, FR-022: an assumption that fails ---------------------------------
@@ -182,7 +236,7 @@ test('a kappa inside type-II but near the boundary warns rather than refuses', a
   await loadFixture(page, 'kappa')
   await page.getByLabel('κ = λ/ξ').fill('2')
   await analyse(page)
-  await expect(page.locator('section.card', { hasText: '가정과 주의사항' }))
+  await expect(assumptionsPanel(page))
     .toContainText('Hc1 근사')
 })
 
@@ -192,7 +246,7 @@ test('the self-field requirement is stated on every result', async ({ page }) =>
   for (const which of ['hc2', 'kappa'] as const) {
     await loadFixture(page, which)
     await analyse(page)
-    await expect(page.locator('section.card', { hasText: '가정과 주의사항' }))
+    await expect(assumptionsPanel(page))
       .toContainText('self-field 조건에서 transport 방식')
   }
 })
@@ -201,7 +255,7 @@ test('a thickness beyond the thin-film regime warns', async ({ page }) => {
   await loadFixture(page, 'hc2')
   await page.getByLabel('시료 두께 [nm]').fill('5000')     // lambda(0) is 250 nm
   await analyse(page)
-  await expect(page.locator('section.card', { hasText: '가정과 주의사항' }))
+  await expect(assumptionsPanel(page))
     .toContainText('박막을 대상으로 유도된')
 })
 

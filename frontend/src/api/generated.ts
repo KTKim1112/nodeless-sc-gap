@@ -223,7 +223,7 @@ export interface components {
          * CouplingRegime
          * @enum {string}
          */
-        CouplingRegime: "BELOW_BCS" | "WEAK_COUPLING_BCS" | "MODERATELY_STRONG" | "STRONG_COUPLING";
+        CouplingRegime: "BELOW_BCS" | "WEAK_COUPLING_BCS" | "MODERATELY_STRONG" | "STRONG_COUPLING" | "UNDETERMINED";
         /**
          * Dataset
          * @description Measured columns, together with the units they are expressed in.

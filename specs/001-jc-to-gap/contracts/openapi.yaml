@@ -461,7 +461,11 @@ components:
         coupling_ratio: { type: number }
         coupling_regime:
           type: string
-          enum: [BELOW_BCS, WEAK_COUPLING_BCS, MODERATELY_STRONG, STRONG_COUPLING]
+          enum: [BELOW_BCS, WEAK_COUPLING_BCS, MODERATELY_STRONG, STRONG_COUPLING, UNDETERMINED]
+          description: >
+            UNDETERMINED when the data do not determine the coupling ratio (FR-023a,
+            research R10): checked before the four ranges, so that a ratio of
+            12 +/- 2300 is not reported as strong coupling.
         bcs_ratio_reference:
           type: number
           description: 3.52775, supplied so the frontend never hard-codes a physical constant

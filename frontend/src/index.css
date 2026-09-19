@@ -314,3 +314,6 @@ table.results.compact { min-width: 0; }
 .badge.regime-MODERATELY_STRONG,
 .badge.regime-STRONG_COUPLING { color: var(--warn); border-color: var(--warn); background: var(--warn-weak); }
 .badge.regime-BELOW_BCS { color: var(--danger); border-color: var(--danger); background: var(--danger-weak); }
+/* FR-023a. Styled as a refusal rather than as a regime: it has to look unlike
+   the four answers it stands in for, or it reads as a fifth one. */
+.badge.regime-UNDETERMINED { color: var(--danger); border-color: var(--danger); background: var(--danger-weak); border-style: dashed; }

@@ -308,9 +308,15 @@ and lets the user inspect `lambda(T)` directly. Both are offered (FR-011).
 
 | Parameter | Initial guess | Bounds |
 | --- | --- | --- |
-| `Tc` | `1.05 * max(T_data)`, or the user's fixed value | `(max(T_data)*1.001, max(T_data)*3)` |
+| `Tc` | `1.05 * max(T_data)`, or the user's fixed value | `(max(T_data)*1.0001, max(T_data)*3)` |
 | `Delta0` | `BCS_ALPHA * KB * Tc_guess` | `(0.2, 6.0) * KB * Tc_guess` |
 | `lambda0` | route A: `lambda_data` at the lowest `T`; route B: solve (1) once at the lowest `T` | `(1e-9, 1e-4)` m |
+
+The lower `Tc` bound read `1.001` here while the code has used `1.0001` since
+it was written; corrected here to match, found while adding the check in R10
+for a parameter resting on one of these limits. A fit that ends on any of them
+is reported as not determining the gap (FR-023a), because the value is then the
+bound's rather than the data's.
 
 ### Parameter uncertainty
 
@@ -664,6 +670,122 @@ Values are stated here so they are reviewable rather than buried in code.
 | `0.3 < t_min <= 0.5` | warning: `Delta(0)` is weakly constrained |
 | `t_min > 0.5` | warning, stronger: `Delta(0)` is essentially an extrapolation |
 
+**Whether the coupling ratio is determined at all (FR-023a).** The low-temperature rule
+above asks whether the data reach down far enough. The opposite question -- do
+they reach *up* far enough -- was missing, and it turns out to be the more
+dangerous of the two, because the fit does not fail. It returns a gap, and
+FR-021 names a coupling regime from it.
+
+Measured on 1200 fits: both gap models, `Jc` scatter 0.5, 1 and 3 %, data from
+`0.05 Tc` up to between `0.15 Tc` and `0.9 Tc`, `Tc` free and `Tc` held at the
+truth, ten seeds each; truth `2 Delta(0) / kB Tc = 3.53`. "Bad" means the
+coupling ratio is more than 10 % wrong, "good" less than 5 %.
+
+*What goes wrong, and what does not.* `lambda(0)` is within 0.7 % in every one
+of the 1200 fits, including the worst: it is set by the coldest points, which
+every such dataset has. The coupling ratio is what fails. With data stopping
+below about `0.3 Tc` it is typically wrong by a factor of three, and in most of
+those fits a parameter is resting on a bound -- more often `alpha` against its
+ceiling of 6 than `Tc` against `3 * T_max`.
+
+*`Delta(0)` is not the ratio.* The first wording of the warning said "the gap
+is not determined", and a screenshot contradicted it: `Delta(0) = 1.42 +/-
+0.12 meV` beside the claim, against a true 1.40. At low temperature `1 - rho_s`
+falls as `exp(-Delta/kT)`, so with small scatter the coldest data can fix
+`Delta(0)` while saying nothing about `Tc` -- and the ratio needs both. Among
+the fits the rule flags:
+
+| | `Tc` free | `Tc` fixed |
+| --- | --- | --- |
+| fits flagged | 400 | 400 |
+| `Delta(0)` actually within 10 % | 32 % | 39 % |
+| of those whose own `Delta(0)` error bar is under 10 %: actually within 10 % | **98 %** (41 fits) | 72 % (183 fits) |
+| true error / stated error, same subset | median 0.26, max **1.7** | median 1.2, max **7.7** |
+
+With `Tc` free, `Delta(0)` is usually wrong too, but its own error bar remains
+honest, conservative even, and can be read. With `Tc` fixed the ratio is
+`Delta(0)` divided by a constant, so the two stand or fall together, and the
+error bar is the overconfident one. The warning says which case applies, and
+is named for the ratio -- `COUPLING_RATIO_NOT_DETERMINED` -- because that is
+what it tests.
+
+*Fixing `Tc` does not rescue it.* The obvious remedy, measured:
+
+| data reach | scatter | `Tc` free: worst ratio error | `Tc` fixed at truth: worst ratio error |
+| --- | --- | --- | --- |
+| `0.15 Tc` | 1 % | 240 % | 206 % |
+| `0.20 Tc` | 1 % | 240 % | 205 % |
+| `0.30 Tc` | 1 % | 182 % | 8 % (clean) / 240 % (dirty) |
+| `0.30 Tc` | 3 % | 240 % | 216 % |
+| `0.50 Tc` | 1 % | 36 % | 1 % (clean) / 3 % (dirty) |
+
+The missing information is the curvature of `rho_s(T)`, which lives above about
+a third of `Tc`; knowing where the curve ends does not supply its shape. The
+warning therefore asks for measurements nearer `Tc` and does not suggest fixing
+it.
+
+*The error bar already knows; nothing was saying so.* The first design detected
+parameters resting on bounds. Measured, it catches only 43 % of bad fits, and it
+adds nothing to the uncertainty the fit already reports: every one of the 247
+fits that ended on a bound had a relative standard error on the coupling ratio
+of at least 50 %, median 19 000 %. The covariance is screaming. What was
+missing was anyone translating that into words, and a regime label that did not
+ignore it.
+
+*The rule.* A coupling regime can be named only when the ratio is known well
+enough to place it in one. The narrowest band in the **Coupling regime** table
+below is weak coupling, 3.3 to 3.8, half-width 0.25. So:
+
+> the coupling ratio is **not determined** when `sigma(2 Delta(0) / kB Tc) > 0.25`, when
+> that standard error is unavailable, when `Tc` or `alpha` rests on a limit of
+> the fit (relative tolerance `1e-4`), or when the data reach less than
+> `0.40 Tc` -- `Tc` as fitted, or the user's when it is held fixed
+
+and then no regime is named. Scored fit by fit:
+
+| rule | catches, of bad | fires, of good | worst bad fit it misses |
+| --- | --- | --- | --- |
+| parameter on a bound, alone | 43 % | 1 % | 240 % |
+| relative stderr > 5 % | 98 % | 14 % | 20 % |
+| relative stderr > 10 % | 89 % | 6 % | 63 % |
+| `sigma > 0.25` or bound | 91 % | 10 % | 63 % |
+| `sigma > 0.35` or bound | 86 % | 7 % | 63 % |
+| **`sigma > 0.25` or bound or reach < 0.40** | **98 %** | **13 %** | **30 %** |
+| ... or reach < 0.50 | 98 % | 20 % | 30 % |
+
+*Why reach was added, and found by a test rather than by the sweep.* The rule
+without it was written first, and a test pinning "fixing `Tc` does not rescue
+the gap" failed against it: with `Tc` held at the truth and data to `0.2 Tc`,
+the linearised error bar came out small, the ratio came out 2.81 against 3.48,
+and the regime was named -- below BCS. The blind spot sits exactly where a user
+following the obvious advice would land. Split by mode:
+
+| | `sigma` or bound | ... or reach < 0.40 |
+| --- | --- | --- |
+| `Tc` fixed: bad fits caught | 80 % | **99.5 %** |
+| `Tc` fixed: worst missed | 63 % | 16 % |
+| `Tc` free: bad fits caught | 97 % | 97 % |
+
+When `Tc` is fixed the reach is not circular, because `Tc` is then the user's
+number. When `Tc` is free the reach uses the fitted value, which is circular --
+but a `Tc` resting on its ceiling gives a reach of exactly `1/3`, so it fires
+there too, and elsewhere in free mode the error bar was already doing the work.
+It adds no firing whatever on data reaching `0.6 Tc` or more. `0.35` and `0.40`
+score identically; `0.50` doubles the firing on sound data.
+
+The 10 % it fires on among "good" fits are not false alarms in the sense that
+matters: in each, the stated uncertainty really is wider than the weak-coupling
+band, so the statement that no regime can be named is true, and the central
+value landing near the truth was luck. On data that reach `0.9 Tc` it fires on
+none of 120 fits; reaching `0.8 Tc`, on 2 % of 240.
+
+*What it cannot catch.* The worst remaining miss, 30 %, is a fit with `Tc`
+free whose data reached past `0.4 Tc` and whose reported uncertainty was small
+and wrong -- among bad fits not on a bound the true error was up to 7.7 times
+the linearised standard error, median 1.3 times. No threshold on a standard
+error can see an underestimated standard error. That is what the Monte Carlo of
+R8 is for, and the warning's absence is not a certificate.
+
 **Clean versus dirty.** Fit both and compare by the Akaike information
 criterion. The two models have the same number of free parameters, so with
 Gaussian residuals over `m` points the difference reduces to
@@ -750,10 +872,15 @@ reported rather than applied silently.
 
 | Range | Characterisation |
 | --- | --- |
+| ratio not determined (above) | **none named**: `UNDETERMINED` |
 | `R < 3.3` | below weak-coupling BCS; check the data and the assumed `Tc` |
 | `3.3 <= R < 3.8` | consistent with weak-coupling BCS |
 | `3.8 <= R < 5.0` | moderately strong coupling |
 | `R >= 5.0` | strong coupling |
+
+The first row is checked first. Without it a gap of `12 +/- 2300` was reported
+as strong coupling, which is the regime label ignoring the error bar printed
+beside it.
 
 **Thin-film regime.** If the user supplies a film thickness `t`, warn when
 `t > 2 * lambda0`, since the relation in R1 was derived for a conductor whose

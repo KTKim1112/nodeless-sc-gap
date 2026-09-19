@@ -59,7 +59,9 @@ test('capture the states worth looking at', async ({ page }) => {
     await charts.screenshot({ path: `${SHOTS}/04b-chart-${name}.png` })
   }
   await charts.getByRole('tab', { name: '초전도 밀도 ρs(T)' }).click()
-  await page.locator('section.card', { hasText: '가정과 주의사항' })
+  await page.locator('section.card').filter({
+    has: page.getByRole('heading', { name: '가정과 주의사항', exact: true }),
+  })
     .screenshot({ path: `${SHOTS}/05-assumptions.png` })
 
   // 5. The other fixture, whose scatter cannot separate the two gap models.
@@ -77,7 +79,9 @@ test('capture the states worth looking at', async ({ page }) => {
     .getByRole('combobox').nth(1)).toHaveValue('FIXED_KAPPA')
   await page.getByRole('button', { name: '분석 실행' }).click()
   await expect(page.getByRole('heading', { name: '피팅 결과' })).toBeVisible()
-  const assumptions = page.locator('section.card', { hasText: '가정과 주의사항' })
+  const assumptions = page.locator('section.card').filter({
+    has: page.getByRole('heading', { name: '가정과 주의사항', exact: true }),
+  })
   await expect(assumptions).toContainText('clean과 dirty')      // MODELS_INDISTINGUISHABLE
   await expect(assumptions).not.toContainText('Ginzburg-Landau') // not the Hc2 route
   await assumptions.screenshot({ path: `${SHOTS}/06-models-indistinguishable.png` })
@@ -91,6 +95,30 @@ test('capture the states worth looking at', async ({ page }) => {
   await expect(charts.locator('.js-plotly-plot')).toBeVisible()
   await page.waitForTimeout(700)
   await charts.screenshot({ path: `${SHOTS}/06b-chart-jc-fixed-kappa.png` })
+
+  // 5c. FR-023a: data that stop at 0.3 Tc, as from a helium dip. The regime
+  // badge has to read as a refusal, not as a fifth answer, and the warning has
+  // to be readable at a glance -- neither of which a test can judge.
+  const cold = read('weak_coupling_clean_hc2.txt').split('\n').filter((line) =>
+    line.trimStart().startsWith('#') || !line.trim()
+      || Number(line.trim().split(/\s+/)[0]) <= 2.8)
+  await page.locator('textarea.data-input').fill(cold.join('\n'))
+  await page.getByLabel('코히런스 길이 ξ 결정 방식').selectOption('FROM_HC2')
+  await page.getByLabel('갭 모델').selectOption('CLEAN')
+  await expect(page.getByRole('heading', { name: '읽은 결과 확인' })).toBeVisible()
+  await page.getByRole('button', { name: '분석 실행' }).click()
+  await expect(page.locator('.badge.regime-UNDETERMINED')).toBeVisible()
+  await page.locator('section.card', { hasText: '피팅 결과' })
+    .screenshot({ path: `${SHOTS}/06c-gap-not-determined.png` })
+  await page.locator('section.card').filter({
+    has: page.getByRole('heading', { name: '가정과 주의사항', exact: true }),
+  })
+    .screenshot({ path: `${SHOTS}/06d-gap-not-determined-warning.png` })
+
+  // Back to the fixed-kappa fixture, which the two steps below are written for.
+  await page.locator('textarea.data-input').fill(read('strong_coupling_dirty_kappa.txt'))
+  await page.getByLabel('코히런스 길이 ξ 결정 방식').selectOption('FIXED_KAPPA')
+  await page.getByLabel('갭 모델').selectOption('DIRTY')
 
   // 6. A refusal, rendered in Korean rather than as a stack trace.
   //

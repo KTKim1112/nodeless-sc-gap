@@ -116,8 +116,17 @@ export function FitSummary({ result }: Props) {
       </div>
 
       <p className="muted small">
-        2Δ(0)/k_BTc = {fmt(ratio)}는 BCS 약결합 값 {bcs}의{' '}
-        {fmt((ratio / bcs) * 100, 1)}%입니다.
+        {/* FR-023a. A percentage of the BCS value, to a tenth of a per cent, is
+            a regime judgement in all but name. Beside a badge saying no regime
+            can be named it read as a contradiction -- found on the screenshot,
+            with a ratio of 4.0 +/- 8.1 described as 112.5 % of BCS. */}
+        {diagnostics.coupling_regime === 'UNDETERMINED'
+          ? `2Δ(0)/k_BTc = ${fmt(ratio)} ± ${fmt(fit.coupling_ratio.stderr)}는 ` +
+            '이 데이터로 정해지지 않아 BCS 값과 비교하지 않습니다. 이유는 아래 「가정과 주의사항」에 있습니다.'
+          : <>
+              2Δ(0)/k_BTc = {fmt(ratio)}는 BCS 약결합 값 {bcs}의{' '}
+              {fmt((ratio / bcs) * 100, 1)}%입니다.
+            </>}
         {uncertainty && (
           <>
             {' '}측정 오차 전파는 {uncertainty.n_valid}/{uncertainty.n_requested} 표본,

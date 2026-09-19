@@ -231,6 +231,35 @@ open, and each plot can be saved as an image.
   strong type-II range at any measured temperature.
 - **FR-023** The system MUST warn when the temperature range of the data is too
   narrow at the low end to constrain the zero-temperature gap.
+- **FR-023a** The system MUST say so, in words, when the data do not determine
+  the coupling ratio -- and MUST NOT name a coupling regime in that case. It
+  MUST also say what that means for the zero-temperature gap itself, which is
+  not the same thing: with the critical temperature free, the gap can still be
+  determined when the ratio is not, and its own uncertainty says when; with the
+  critical temperature fixed, the two are one quantity and neither is.
+
+  *Why this is separate from FR-023.* The failure it describes happens at the
+  other end of the temperature range. Below about a third of the critical
+  temperature the superfluid density is flat against one to within the scatter,
+  so data that stop there carry almost no information about the gap, and a
+  measurement taken in a liquid-helium bath and nowhere else is exactly such a
+  dataset. The fit still returns a gap. It returns it with an enormous
+  uncertainty, and often with a parameter resting against one of the limits the
+  fit is confined to -- but FR-021 then characterises the coupling regime from
+  the central value alone, and a weak-coupling superconductor measured this way
+  is reported as strongly coupled.
+
+  The fitted zero-temperature penetration depth is not affected and MUST still
+  be reported: it is set by the coldest data, which such a dataset has plenty
+  of.
+
+  *What fixing the critical temperature does not do.* It is the obvious remedy
+  and it does not work. With the critical temperature held at its true value
+  the gap from such data is still wrong by a factor of three, because the
+  information that is missing is the shape of the superfluid density, not the
+  temperature at which it ends. The warning MUST NOT suggest it. What it can
+  honestly say is that measurements closer to the critical temperature are
+  needed.
 - **FR-024** The system MUST state, alongside every result, that the input is
   required to be self-field transport critical current density from a thin film
   free of weak links, and MUST warn when a film thickness the user supplies is

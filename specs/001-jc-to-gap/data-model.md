@@ -260,7 +260,7 @@ Never contains a display sentence (constitution IV).
 | `chi2_dirty` | `float \| None` | |
 | `preferred_model` | `GapModel \| None` | `None` when indistinguishable |
 | `coupling_ratio` | `float` | |
-| `coupling_regime` | `str` | one of `BELOW_BCS`, `WEAK_COUPLING_BCS`, `MODERATELY_STRONG`, `STRONG_COUPLING` (research R10) |
+| `coupling_regime` | `str` | one of `BELOW_BCS`, `WEAK_COUPLING_BCS`, `MODERATELY_STRONG`, `STRONG_COUPLING`, or `UNDETERMINED` when the coupling ratio is not determined by the data (research R10, FR-023a) |
 | `bcs_ratio_reference` | `float` | `3.52775`, so the frontend never hard-codes it |
 | `t_min_over_tc` | `float` | |
 | `kappa_min` | `float` | |

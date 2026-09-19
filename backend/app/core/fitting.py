@@ -306,6 +306,42 @@ def _solve(problem: _Problem, route: FitRoute) -> FitResult:
     return fit
 
 
+# --- whether a result is the data's or the bounds' ---------------------------
+
+#: How close to a bound counts as resting on it. The optimiser lands on an
+#: active bound to within about 1e-10; this is loose enough to catch that and
+#: far too tight for a genuine value to be mistaken for it (research R10).
+_AT_LIMIT_RTOL = 1e-4
+
+
+def parameters_at_limit(fit: FitResult, t_max_K: float) -> list[str]:
+    """Which fitted parameters are resting on a bound rather than on the data.
+
+    A parameter there is a statement about where the search was allowed to go,
+    not about the sample, and the covariance formula in `_covariance` does not
+    describe it -- that formula has no term for the constraint. Research R10
+    measures how often this happens and finds the reported uncertainty is
+    enormous in every such case; this exists so that it can be *said*, rather
+    than left for the reader to infer from an error bar of 19 000 %.
+
+    Here, rather than in diagnostics, because this module owns the bounds and
+    a second copy of them elsewhere is how the two would drift apart. `t_max_K`
+    is needed because the `Tc` bounds are relative to it.
+    """
+    out: list[str] = []
+    alpha = fit.delta0.value / (KB * fit.tc.value)
+    if any(math.isclose(alpha, b, rel_tol=_AT_LIMIT_RTOL) for b in _ALPHA_BOUNDS):
+        out.append("alpha")
+    if not fit.tc.fixed:
+        tc_bounds = (t_max_K * _TC_LOWER_MARGIN, t_max_K * _TC_UPPER_FACTOR)
+        if any(math.isclose(fit.tc.value, b, rel_tol=_AT_LIMIT_RTOL) for b in tc_bounds):
+            out.append("tc")
+    if any(math.isclose(fit.lambda0.value, b, rel_tol=_AT_LIMIT_RTOL)
+           for b in _LAMBDA0_BOUNDS):
+        out.append("lambda0")
+    return out
+
+
 # --- public entry points -----------------------------------------------------
 
 def _model_xi_inputs(
