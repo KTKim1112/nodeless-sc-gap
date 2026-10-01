@@ -150,8 +150,8 @@ Git은 "파일을 저장할 때마다 스냅샷을 찍어 두는 프로그램"�
 git --version
 
 # 최초 1회, 커밋에 남을 이름과 메일 설정
-git config --global user.name  "ktkim"
-git config --global user.email "kgtakee@gmail.com"
+git config --global user.name  "your name"
+git config --global user.email "you@example.com"
 ```
 
 #### ② Python — 계산 엔진
@@ -207,7 +207,7 @@ npm --version    # 11.17.0
 claude --version
 
 # 프로젝트 폴더로 이동한 뒤 실행
-cd C:\Users\kgtak\projects\nodeless-sc-gap
+cd C:\Users\<name>\projects\nodeless-sc-gap
 claude
 ```
 
@@ -268,10 +268,9 @@ Docker는 프로그램과 그것이 필요로 하는 모든 것(Python 버전, �
 > - **OneDrive·Dropbox 같은 동기화 폴더 밖일 것.** 동기화 클라이언트가 파일을
 >   잡고 있으면 빌드가 간헐적으로 실패하고, 원인을 찾기가 매우 어렵습니다.
 >
-> 이 프로젝트는 처음에
-> `C:\Users\kgtak\OneDrive\바탕 화면\개인 폴더\Program\Nodeless SC_Jc cal`에
-> 있었고, 세 조건을 전부 어기고 있었습니다. 그래서
-> `C:\Users\kgtak\projects\nodeless-sc-gap`으로 옮겼습니다.
+> 이 프로젝트는 처음에 경로에 한글과 공백이 섞인 OneDrive 폴더 안에 있었고,
+> 세 조건을 전부 어기고 있었습니다. 그래서
+> `C:\Users\<name>\projects\nodeless-sc-gap`으로 옮겼습니다.
 
 이사할 때 알아 둘 것:
 
@@ -282,7 +281,7 @@ Docker는 프로그램과 그것이 필요로 하는 모든 것(Python 버전, �
 
 ```powershell
 # 새 위치에서 환경 다시 만들기 — 최초 1회
-cd C:\Users\kgtak\projects\nodeless-sc-gap\backend
+cd C:\Users\<name>\projects\nodeless-sc-gap\backend
 python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -e ".[dev]"
 
@@ -349,7 +348,7 @@ Code가 했고, 만들어진 파일 어디에도 Orca에 의존하는 부분이 
 >
 > Orca는 에이전트마다 독립된 작업 공간을 주려고 **git worktree**를 만듭니다. 같은
 > 저장소를 다른 폴더에 한 벌 더 펼쳐 놓고 다른 브랜치를 체크아웃하는 기능입니다.
-> 이 프로젝트에서는 `C:\Users\kgtak\nodeless-sc-gap\burbot`에 그런 폴더가
+> 이 프로젝트에서는 `C:\Users\<name>\nodeless-sc-gap\burbot`에 그런 폴더가
 > **정리되지 않은 채 남아 있었습니다.** 초기 커밋 상태로 멈춰 있었고, 거기에 물린
 > `burbot` 브랜치는 삭제도 되지 않았습니다.
 >
@@ -375,8 +374,8 @@ Code가 했고, 만들어진 파일 어디에도 Orca에 의존하는 부분이 
 #### 폴더를 새로 만드는 경우
 
 ```powershell
-mkdir C:\Users\kgtak\projects\my-new-project
-cd C:\Users\kgtak\projects\my-new-project
+mkdir C:\Users\<name>\projects\my-new-project
+cd C:\Users\<name>\projects\my-new-project
 git init
 claude
 ```
@@ -391,7 +390,7 @@ claude
 **`claude`를 치기 전에 지금 상태를 먼저 박제해 두십시오.**
 
 ```powershell
-cd C:\Users\kgtak\projects\my-new-project
+cd C:\Users\<name>\projects\my-new-project
 git init
 git add -A
 git commit -m "Existing files before the rebuild begins"
@@ -1236,7 +1235,7 @@ nodeless-sc-gap/
 
 ```powershell
 # ① 가장 쉬운 방법 — 서버 둘을 켜고 브라우저까지 열어 줍니다
-cd C:\Users\kgtak\projects\nodeless-sc-gap
+cd C:\Users\<name>\projects\nodeless-sc-gap
 .\dev.ps1
 #   → http://127.0.0.1:5173      화면
 #   → http://127.0.0.1:8000/docs  API 시험창
@@ -1449,8 +1448,8 @@ node --version
 claude --version
 
 # 폴더 이름은 한글 없이, 공백 없이, OneDrive 밖 (2.3절)
-mkdir C:\Users\kgtak\projects\my-new-project
-cd C:\Users\kgtak\projects\my-new-project
+mkdir C:\Users\<name>\projects\my-new-project
+cd C:\Users\<name>\projects\my-new-project
 git init
 claude
 ```
@@ -1631,7 +1630,7 @@ TypeScript는 이걸 컴파일 시점에 검사해서, 서버와 화면의 형�
 
 ```powershell
 # ──────── 시작 ────────
-cd C:\Users\kgtak\projects\nodeless-sc-gap
+cd C:\Users\<name>\projects\nodeless-sc-gap
 claude                                   # AI 대화 시작
 claude --resume                          # 이전 대화 이어서
 .\dev.ps1                                # 서버 둘 켜고 브라우저 열기

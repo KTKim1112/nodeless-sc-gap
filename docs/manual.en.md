@@ -156,8 +156,8 @@ the only way to see what happened.
 git --version
 
 # Once, so commits carry a name
-git config --global user.name  "ktkim"
-git config --global user.email "kgtakee@gmail.com"
+git config --global user.name  "your name"
+git config --global user.email "you@example.com"
 ```
 
 #### 2. Python — the calculation engine
@@ -214,7 +214,7 @@ results.
 claude --version
 
 # Then, from the project folder
-cd C:\Users\kgtak\projects\nodeless-sc-gap
+cd C:\Users\<name>\projects\nodeless-sc-gap
 claude
 ```
 
@@ -276,10 +276,9 @@ what removes "but it works on my computer".
 >   holding a file open makes builds fail intermittently, and the cause is very
 >   hard to find.
 >
-> This project began at
-> `C:\Users\kgtak\OneDrive\바탕 화면\개인 폴더\Program\Nodeless SC_Jc cal`,
-> breaking all three. It was moved to
-> `C:\Users\kgtak\projects\nodeless-sc-gap`.
+> This project began inside a OneDrive folder whose path carried Korean
+> characters and a space, breaking all three rules at once. It was moved to
+> `C:\Users\<name>\projects\nodeless-sc-gap`.
 
 Two things to know when moving:
 
@@ -290,7 +289,7 @@ Two things to know when moving:
 
 ```powershell
 # Rebuilding the environment at a new location -- once
-cd C:\Users\kgtak\projects\nodeless-sc-gap\backend
+cd C:\Users\<name>\projects\nodeless-sc-gap\backend
 python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -e ".[dev]"
 
@@ -363,7 +362,7 @@ it means opening a terminal and typing `claude`.
 > To give each agent an independent workspace, Orca creates **git worktrees**:
 > a second checkout of the same repository in another folder, on another
 > branch. In this project one had been left behind at
-> `C:\Users\kgtak\nodeless-sc-gap\burbot`, frozen at the initial commit, and
+> `C:\Users\<name>\nodeless-sc-gap\burbot`, frozen at the initial commit, and
 > the `burbot` branch attached to it could not be deleted.
 >
 > ```powershell
@@ -390,8 +389,8 @@ never going to appear.
 #### Starting a folder from scratch
 
 ```powershell
-mkdir C:\Users\kgtak\projects\my-new-project
-cd C:\Users\kgtak\projects\my-new-project
+mkdir C:\Users\<name>\projects\my-new-project
+cd C:\Users\<name>\projects\my-new-project
 git init
 claude
 ```
@@ -407,7 +406,7 @@ Starting where some code or a draft document already sits is the more common
 case. Here, **freeze the current state before typing `claude`.**
 
 ```powershell
-cd C:\Users\kgtak\projects\my-new-project
+cd C:\Users\<name>\projects\my-new-project
 git init
 git add -A
 git commit -m "Existing files before the rebuild begins"
@@ -1298,7 +1297,7 @@ nodeless-sc-gap/
 
 ```powershell
 # 1. The easy one -- starts both servers and opens the browser
-cd C:\Users\kgtak\projects\nodeless-sc-gap
+cd C:\Users\<name>\projects\nodeless-sc-gap
 .\dev.ps1
 #   -> http://127.0.0.1:5173       the page
 #   -> http://127.0.0.1:8000/docs  the API test page
@@ -1521,8 +1520,8 @@ node --version
 claude --version
 
 # No non-ASCII characters, no spaces, outside OneDrive (section 2.3)
-mkdir C:\Users\kgtak\projects\my-new-project
-cd C:\Users\kgtak\projects\my-new-project
+mkdir C:\Users\<name>\projects\my-new-project
+cd C:\Users\<name>\projects\my-new-project
 git init
 claude
 ```
@@ -1712,7 +1711,7 @@ installed eight into Claude Code.
 
 ```powershell
 # ---- starting ----
-cd C:\Users\kgtak\projects\nodeless-sc-gap
+cd C:\Users\<name>\projects\nodeless-sc-gap
 claude                                   # start an agent session
 claude --resume                          # continue an earlier one
 .\dev.ps1                                # both servers, and open the page
