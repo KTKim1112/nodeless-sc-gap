@@ -44,6 +44,16 @@ desktop.ini
 !backend/tests/data/weak_coupling_clean_hc2.txt
 !backend/tests/data/strong_coupling_dirty_kappa.txt
 
+# --- The maintainer's own measurements ---
+# Unpublished sample data, kept beside the tool for convenience and never
+# distributed with it. This repository is public and `data/csv3sb5_JC.opj` is
+# 95 MB -- under GitHub's 100 MB limit, so nothing downstream would have
+# stopped an absent-minded `git add -A`. Analysis formats as well as raw ones,
+# because an Origin project is as much someone's unpublished result as a CSV.
+data/
+*.opj
+*.opju
+
 # --- Packaging ---
 # PyInstaller output. Rebuilt by packaging/build.ps1, and the executable is
 # 54 MB, which is not a thing to keep ten copies of in history.
